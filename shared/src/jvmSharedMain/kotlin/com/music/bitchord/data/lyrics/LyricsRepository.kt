@@ -378,8 +378,8 @@ object LyricsRepository {
 
         try {
             while (pending.isNotEmpty()) {
-                val next = if (deadlineAtMs == null) {
-                    select {
+                val next: Pair<Int, Result?> = if (deadlineAtMs == null) {
+                    select<Pair<Int, Result?>> {
                         pending.forEach { (index, pair) ->
                             pair.second.onAwait { res -> index to res }
                         }
@@ -388,7 +388,7 @@ object LyricsRepository {
                     val remaining = deadlineAtMs - System.currentTimeMillis()
                     if (remaining <= 0L) break
                     withTimeoutOrNull(remaining) {
-                        select {
+                        select<Pair<Int, Result?>> {
                             pending.forEach { (index, pair) ->
                                 pair.second.onAwait { res -> index to res }
                             }
