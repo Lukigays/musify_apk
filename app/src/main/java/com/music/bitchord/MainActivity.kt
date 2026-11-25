@@ -3319,8 +3319,30 @@ private fun BitChordApp(
                                                 ),
                                             )
                                         }
-                                        val ytPlaylists = (libraryState as? UiState.Success)?.data?.playlists.orEmpty()
-                                        ytPlaylists.forEach { p ->
+                                        val libraryData = (libraryState as? UiState.Success)?.data
+                                        val liked = libraryData?.likedSongs.orEmpty()
+                                        if (liked.isNotEmpty()) {
+                                            add(
+                                                ExportDataSource(
+                                                    id = "library:liked",
+                                                    title = context.getString(R.string.auto_liked),
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, liked.size),
+                                                    songs = liked,
+                                                ),
+                                            )
+                                        }
+                                        val librarySongs = libraryData?.librarySongs.orEmpty()
+                                        if (librarySongs.isNotEmpty()) {
+                                            add(
+                                                ExportDataSource(
+                                                    id = "library:songs",
+                                                    title = context.getString(R.string.library),
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, librarySongs.size),
+                                                    songs = librarySongs,
+                                                ),
+                                            )
+                                        }
+                                        playlists.forEach { p ->
                                             add(
                                                 ExportDataSource(
                                                     id = p.browseId,
@@ -3382,7 +3404,7 @@ private fun BitChordApp(
                                                 },
                                             ),
                                         )
-                                        val histSongs = (historyState as? UiState.Success)?.data?.map { it.song }.orEmpty()
+                                        val histSongs = (historyState as? UiState.Success)?.data.orEmpty()
                                         if (histSongs.isNotEmpty()) {
                                             add(
                                                 ExportDataSource(
