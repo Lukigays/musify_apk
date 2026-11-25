@@ -80,13 +80,30 @@ jobs:
         AAPT2=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort | tail -n1 || true)
         ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort | tail -n1 || true)
 
+        KS_FILE=$(grep '^storeFile=' keystore.properties | cut -d= -f2- || true)
+        KS_ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2- || true)
+        export KS_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2- || true)
+        export KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2- || true)
+
         for apk in \
           app/build/outputs/apk/prod/release/*.apk \
           tv/build/outputs/apk/prod/release/*.apk \
           wearos/build/outputs/apk/prod/release/*.apk
         do
           [ -f "$apk" ] || continue
-          echo "=== Verifying $apk ==="
+          echo "=== Signing (v1+v2+v3) & Verifying $apk ==="
+          if [ -n "$APKSIGNER" ] && [ -n "$KS_FILE" ] && [ -f "$KS_FILE" ]; then
+            "$APKSIGNER" sign \
+              --v1-signing-enabled true \
+              --v2-signing-enabled true \
+              --v3-signing-enabled true \
+              --ks "$KS_FILE" \
+              --ks-key-alias "$KS_ALIAS" \
+              --ks-pass env:KS_PASS \
+              --key-pass env:KEY_PASS \
+              "$apk"
+          fi
+
           unzip -tqq "$apk"
           unzip -l "$apk" | grep -q "resources.arsc"
           unzip -l "$apk" | grep -q "AndroidManifest.xml"
