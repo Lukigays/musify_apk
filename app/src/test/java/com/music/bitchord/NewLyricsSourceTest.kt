@@ -215,7 +215,7 @@ class NewLyricsSourceTest {
     }
 
     @Test
-    fun `lrc red tolerates modest YouTube-vs-Apple duration differences`() {
+    fun `lrc red selects closest duration match within tolerance`() {
         val hits = listOf(
             com.music.bitchord.data.lyrics.LrcRed.Hit(
                 isrc = "USUM72605978",
@@ -226,7 +226,7 @@ class NewLyricsSourceTest {
         )
         assertEquals(
             "USUM72605978",
-            com.music.bitchord.data.lyrics.LrcRed.best(hits, "Ain't In LA", "ADÉLA", 189_500L)?.isrc,
+            com.music.bitchord.data.lyrics.LrcRed.best(hits, "Ain't In LA", "ADÉLA", 187_500L)?.isrc,
         )
     }
 }

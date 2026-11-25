@@ -37,7 +37,7 @@ object LrcRed {
      * at 356.5 s against 352.0 s for the live cut — close enough that the
      * version words in [best] have to do most of the work, not this.
      */
-    private const val DURATION_TOLERANCE_SECONDS = 6.0
+    private const val DURATION_TOLERANCE_SECONDS = 3.0
 
     /** `CC-XXX-YY-NNNNN` without the dashes — and nothing else goes into a path. */
     private val ISRC = Regex("""[A-Z]{2}[A-Z0-9]{3}\d{7}""")
