@@ -1379,10 +1379,9 @@ private fun CardsTabPanel(
             label = "Skala Kartu",
             value = selectedCard.scale,
             range = POSTER_CARD_MIN_SCALE..POSTER_CARD_MAX_SCALE,
+            onChange = { onUpdateCard(selectedCard.copy(scale = it)) },
             valueText = "${(selectedCard.scale * 100f).roundToInt()}%",
-        ) {
-            onUpdateCard(selectedCard.copy(scale = it))
-        }
+        )
     }
 }
 
@@ -1900,8 +1899,8 @@ private fun LabeledSlider(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
-    valueText: String? = null,
     onChange: (Float) -> Unit,
+    valueText: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().height(34.dp),

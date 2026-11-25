@@ -197,12 +197,12 @@ class YouTubeMusicLyricsTest {
             album = "SOS (LANA)",
         ) { url ->
             requestedUrls += url
-            if ("al=" in url) null else """{"lrc":"[00:10.00] Good day in my mind"}"""
+            if ("al=" in url) null else """{"lrc":"[00:01.00] Good day in my mind"}"""
         }
         assertEquals(2, requestedUrls.size)
         assertTrue("al=" in requestedUrls[0])
         assertFalse("al=" in requestedUrls[1])
-        assertEquals(listOf("Good day in my mind"), lines?.map { it.text })
+        assertEquals(listOf("Good day in my mind"), lines?.filterNot { it.isGap }?.map { it.text })
     }
 
     @Test
