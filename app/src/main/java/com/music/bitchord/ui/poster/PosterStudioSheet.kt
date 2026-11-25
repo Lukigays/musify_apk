@@ -1375,13 +1375,14 @@ private fun CardsTabPanel(
         LabeledSlider("3D Putar Y", selectedCard.tiltY, -42f..42f) {
             onUpdateCard(selectedCard.copy(tiltY = it))
         }
-        LabeledSlider(
+        LabeledSliderWithValue(
             label = "Skala Kartu",
             value = selectedCard.scale,
             range = POSTER_CARD_MIN_SCALE..POSTER_CARD_MAX_SCALE,
-            onChange = { onUpdateCard(selectedCard.copy(scale = it)) },
             valueText = "${(selectedCard.scale * 100f).roundToInt()}%",
-        )
+        ) {
+            onUpdateCard(selectedCard.copy(scale = it))
+        }
     }
 }
 
@@ -1900,7 +1901,28 @@ private fun LabeledSlider(
     value: Float,
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit,
-    valueText: String? = null,
+) {
+    LabeledSliderImpl(label = label, value = value, range = range, valueText = null, onChange = onChange)
+}
+
+@Composable
+private fun LabeledSliderWithValue(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    onChange: (Float) -> Unit,
+) {
+    LabeledSliderImpl(label = label, value = value, range = range, valueText = valueText, onChange = onChange)
+}
+
+@Composable
+private fun LabeledSliderImpl(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    valueText: String?,
+    onChange: (Float) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().height(34.dp),
