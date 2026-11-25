@@ -1,3 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Musify</string>
     <string name="playback_channel_name">再生中</string>
@@ -668,8 +669,6 @@
     <string name="this_month">今月</string>
     <string name="this_year">今年</string>
     <string name="all_time">すべての期間</string>
-
-    <!-- Listen together -->
     <string name="listen_together">一緒に聴く</string>
     <string name="listen_together_subtitle">コードを共有して、同じ音楽を同時に再生</string>
     <string name="listen_together_in_party">パーティー中 · %1$s</string>
@@ -770,46 +769,25 @@
     <string name="listen_together_status_custom_fallback">カスタムサーバーに接続できません · 既定のフォールバックを使用中（%1$d ms）</string>
     <string name="listen_together_status_all_offline">カスタムサーバーと既定のサーバーの両方がオフラインです</string>
     <string name="listen_together_top_bar_fallback">フォールバック · %1$s</string>
-
     <string name="vietnamese">ベトナム語</string>
-
     <string name="miscellaneous_footer">オンにすると、最近のアプリ画面からアプリを終了した際に音楽の再生も停止します。</string>
-
-
     <string name="switch_account">アカウントを切り替える</string>
-
     <string name="accounts">アカウント</string>
-
     <string name="profiles">プロフィール</string>
-
     <string name="personal">個人</string>
-
     <string name="brand_account">ブランド アカウント</string>
-
     <string name="add_account">アカウントを追加</string>
-
     <string name="manage_accounts">アカウントを管理</string>
-
     <string name="current_account">現在のアカウント</string>
-
     <string name="current_profile">現在のプロフィール</string>
-
     <string name="selected_account">選択したアカウント</string>
-
     <string name="listen_as">次のユーザーとして聴く</string>
-
     <string name="default_youtube_profile">YouTube Music デフォルト プロフィール</string>
-
     <string name="account_profiles_help">Google アカウントには個人プロフィールとブランド プロフィールがあります。それぞれにライブラリ、高評価、再生履歴があります。</string>
-
     <string name="choose_profile">プロフィールを選択</string>
-
     <string name="use_this_profile">このプロフィールを使用</string>
-
     <string name="switch_profile_hint">アバターで切り替えて、このプロフィールを使用します。</string>
-
     <string name="profile_unavailable">このページではログインしているプロフィールはまだありません。</string>
-
     <string name="export_compatible_downloads">互換性のあるダウンロードをエクスポート</string>
     <string name="sync_downloaded_playlists">プレイリストを最新に保つ</string>
     <string name="sync_downloaded_playlists_subtitle">1日2回確認し、ダウンロード済みプレイリストに追加された曲をダウンロードします</string>
@@ -819,9 +797,7 @@
     <string name="playlist_sync_ask_text">タップしてダウンロード</string>
     <string name="playlist_sync_done_title">%1$s に追加：%2$d</string>
     <string name="playlist_updates_channel">プレイリストの更新</string>
-
     <string name="output_precision">出力精度</string>
-
     <string name="prefer_usb_dac">USB DAC を優先</string>
     <string name="loudness_normalization">音量の正規化</string>
     <string name="loudness_normalization_subtitle">すべての曲を同じラウドネスにそろえます</string>
@@ -836,246 +812,125 @@
     <string name="loudness_measuring">測定中…</string>
     <string name="loudness_gain_db">%1$s dB</string>
     <string name="loudness_lufs">%1$s LUFS</string>
-
     <string name="blur_unfocused_lyrics">フォーカスされていない歌詞をぼかす</string>
-
     <string name="blur_unfocused_lyrics_subtitle">現在の行をハイライトします</string>
-
-
     <string name="lyrics_debug_logs">歌詞デバッグログ</string>
-
     <string name="lyrics_debug_logs_subtitle">歌詞パネルにライブ API クエリとスクレイパーのアクティビティを表示します</string>
-
     <string name="shelf_trending_community_playlists">急上昇のコミュニティ再生リスト</string>
-
     <string name="shelf_featured_playlists_for_you">おすすめの再生リスト</string>
-
     <string name="shelf_quick_picks">クイック ミックス</string>
-
     <string name="shelf_listen_again">もう一度聴く</string>
-
     <string name="shelf_mixed_for_you">ミックス</string>
-
     <string name="shelf_similar_to">%1$s に似ている曲</string>
-
     <string name="shelf_forgotten_favorites">よく聴いたお気に入りの曲</string>
-
     <string name="shelf_recommended_music_videos">おすすめのミュージック ビデオ</string>
-
     <string name="shelf_from_your_library">ライブラリから</string>
-
     <string name="shelf_charts">チャート</string>
-
     <string name="shelf_new_releases">最新リリース</string>
-
     <string name="shelf_top_music_videos">人気のミュージック ビデオ</string>
-
     <string name="shelf_for_you">あなたへのおすすめ</string>
-
     <string name="shelf_energy_boosters">エネルギー チャージ</string>
-
     <string name="shelf_feel_good">気分アップ</string>
-
     <string name="shelf_commute">通勤・通学</string>
-
     <string name="shelf_workout">ワークアウト</string>
-
     <string name="shelf_focus">集中</string>
-
     <string name="shelf_relax">リラックス</string>
-
     <string name="shelf_sleep">睡眠</string>
-
     <string name="shelf_party">パーティー</string>
-
     <string name="shelf_romance">ロマンス</string>
-
     <string name="shelf_sad">哀愁</string>
-
     <string name="shelf_100_on_repeat">リピート再生中</string>
-
     <string name="shelf_new_albums_singles">最新アルバム＆シングル</string>
-
     <string name="shelf_hits_today">今日のヒット曲</string>
-
     <string name="shelf_artists_on_the_rise">注目のアーティスト</string>
-
     <string name="shelf_top_tunes_right_now">注目の曲</string>
-
     <string name="shelf_concerts">コンサート</string>
-
     <string name="shelf_shorts">ショート</string>
-
     <string name="shelf_single">シングル</string>
-
     <string name="shelf_chart">チャート</string>
-
     <string name="shelf_song_item">曲</string>
-
     <string name="shelf_from_the_community">コミュニティより</string>
-
     <string name="shelf_youtube_charts">YouTube チャート</string>
-
     <string name="shelf_trending">急上昇</string>
-
     <string name="shelf_recents">最近</string>
-
     <string name="subscriptions">登録チャンネル</string>
-
     <string name="card_views_format">%1$s 回視聴</string>
-
     <string name="card_plays_format">%1$s 回再生</string>
-
     <string name="card_songs_format">%1$s 曲</string>
-
-
     <plurals name="track_count_plural">
         <item quantity="other">%1$d 曲</item>
     </plurals>
-
     <string name="add_addon">アドオンを追加</string>
-
     <string name="add_addon_detail">ホストしているかリンクを受け取ったアドオン サーバーを Musify に指定します</string>
-
     <string name="addon_url_description">アドオンの URL（ルートまたは manifest.json）を貼り付けます。Musify が検索および再生できる曲を読み取ります。</string>
-
     <string name="automix_mode_balanced">バランス</string>
-
     <string name="automix_mode_balanced_subtitle">2 スレッド · 速度、発熱、バッテリーのバランスを推奨</string>
-
     <string name="automix_mode_efficient">省電力</string>
-
     <string name="automix_mode_efficient_subtitle">1 スレッド · 最低限の発熱とバッテリー消費 · 分析に時間がかかる場合があります</string>
-
     <string name="automix_mode_performance">高パフォーマンス</string>
-
     <string name="automix_mode_performance_subtitle">4 スレッド · 最速分析 · 発熱とバッテリー消費が高くなります</string>
-
-
     <string name="automix_performance">Automix パフォーマンス</string>
-
     <string name="automix_performance_subtitle">バックグラウンド分析で使用できる CPU 使用量を設定します</string>
-
     <string name="automix_performance_warning">高いパフォーマンスを設定すると分析が速くなりますが、バッテリーを多く消費し端末が温かくなる可能性があります。</string>
-
     <string name="channel_session_unavailable">このページにはまだセッションがありません — 最初に YouTube Music を開いてください</string>
-
     <string name="channel_switch_instructions">アバターで切り替え、[このチャンネルを使用] をタップします</string>
-
     <string name="choose_a_channel">チャンネルを選択</string>
-
     <string name="convert_to_audio">音声に変換</string>
     <string name="convert_to_video">動画に変換</string>
-
     <string name="converting_to_audio">音声に変換中…</string>
-
     <string name="dolby_atmos">Dolby Atmos</string>
-
     <string name="dolby_atmos_subtitle">利用可能な場合は、より臨場感のあるサラウンド バージョンの曲を再生します。</string>
-
     <string name="dolby_atmos_unavailable">このデバイスは Atmos を再生できないため、通常バージョンで再生されます</string>
-
     <string name="player_theme">プレーヤーのテーマ</string>
     <string name="player_theme_default">デフォルト</string>
     <string name="player_theme_legacy">従来</string>
     <string name="player_theme_simple">シンプル</string>
     <string name="player_theme_default_subtitle">カバーの色がその下へと続きます</string>
     <string name="player_theme_simple_subtitle">ぼかしたカバーをプレーヤー全体の背景に表示します</string>
-
     <string name="player_theme_legacy_subtitle">v1.5 のプレーヤー背面の流れるカラー アニメーションを復元します</string>
-
     <string name="liquid_glass">リキッド グラス</string>
-
     <string name="liquid_glass_subtitle">フローティング ナビゲーション バーの屈折ガラス効果。Android 12 以降のみ。</string>
-
     <string name="liquid_glass_unavailable">Android 12 以降が必要です</string>
-
-
     <string name="playlist_action">プレイリスト</string>
-
     <string name="radio_started">%1$s ラジオを開始しました</string>
-
     <string name="revert_to_original">オリジナルに戻す</string>
-
     <string name="scrobble_primary_artist_only">メイン アーティストのみスクロブル</string>
-
     <string name="scrobble_primary_artist_only_subtitle">曲に複数のアーティストがクレジットされている場合は最初のアーティストを使用します</string>
-
     <string name="select_all">すべて選択</string>
-
     <string name="sort_date_added_oldest">追加日（古い順）</string>
-
     <string name="sort_date_added_toggle">追加日</string>
-
     <string name="sort_default">デフォルトの順序</string>
     <string name="sort_track_number">トラック番号</string>
-
     <string name="sort_library">並べ替え</string>
-
     <string name="sort_songs">曲を並べ替え</string>
-
     <string name="source_already_added">%1$s として追加済み</string>
-
     <string name="source_skipped_by_quality">%1$s では使用されていません · 音質は %2$s に設定されています</string>
-
     <string name="source_unrecognised">Musify はそのリンクを認識できませんでした</string>
-
     <string name="start_radio">ラジオを開始</string>
-
     <string name="subscribe">チャンネル登録</string>
-
     <string name="unsubscribe">チャンネル登録を解除</string>
-
     <string name="upgrade_quality">音質をアップグレード</string>
-
     <string name="use_this_channel">このチャンネルを使用</string>
-
-
     <string name="lyrics_offset">Lyrics offset</string>
-
-
-
-
-
     <string name="auto_quick_picks">Quick picks</string>
-
     <string name="auto_recents">Recent</string>
-
     <string name="auto_liked">Liked songs</string>
-
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
-
     <string name="auto_login_subtitle">Open Musify on your phone to sign in</string>
-
     <string name="auto_empty_recents_title">No recent songs</string>
-
     <string name="auto_empty_recents_subtitle">Songs you play will appear here</string>
-
     <string name="auto_empty_quick_picks_title">No suggestions</string>
-
     <string name="auto_empty_quick_picks_subtitle">Check your connection and try again</string>
-
     <string name="auto_empty_playlists_title">No playlists available</string>
-
     <string name="auto_empty_playlists_subtitle">Check your connection and try again</string>
-
     <string name="auto_empty_liked_title">No liked songs</string>
-
     <string name="auto_empty_liked_subtitle">Tap the heart on a song to save it here</string>
-
     <string name="auto_empty_offline_title">No offline songs</string>
-
     <string name="auto_empty_offline_subtitle">Download songs on your phone to listen here</string>
-
     <string name="auto_unavailable_title">Content unavailable</string>
-
     <string name="auto_unavailable_subtitle">Reopen the folder and try again</string>
-
     <string name="settings_search_hint">Search settings</string>
-
     <string name="settings_search_empty">No settings match “%1$s”</string>
-
-
     <string name="content_preferences">Content Preferences</string>
     <string name="hide_recents">Hide Recents</string>
     <string name="hide_home_videos">Hide videos from Home</string>
@@ -1088,100 +943,53 @@
     <string name="prefer_music_only_subtitle">Music videos play as their audio version, and the next track in the queue is converted ahead of time so Automix and crossfade work</string>
     <string name="smart_version_alignment">スマート音声同期</string>
     <string name="smart_version_alignment_subtitle">波形を解析して、対応する再生位置を正確に合わせます</string>
-
     <string name="equalizer_footer">Shapes the sound inside Musify， before it reaches the system.</string>
-
     <string name="equalizer_dynamic">Dynamic</string>
-
     <string name="equalizer_manual">Manual</string>
-
     <string name="equalizer_tone">Tone</string>
-
     <string name="equalizer_tilt">Tilt</string>
-
     <string name="equalizer_contour">Contour</string>
-
     <string name="equalizer_broad">Broad</string>
-
     <string name="equalizer_focused">Focused</string>
-
     <string name="equalizer_broad_footer">Drag left for a warmer sound and right for a brighter one； down scoops the middle， up brings it forward. Broad moves wide stretches of the spectrum at once.</string>
-
     <string name="equalizer_focused_footer">Drag left for a warmer sound and right for a brighter one； down scoops the middle， up brings it forward. Focused works on narrower stretches， so it changes less around what it moves.</string>
-
     <string name="equalizer_preset">Preset</string>
-
     <string name="equalizer_bands">Bands</string>
-
     <string name="equalizer_bands_footer">Moving a band leaves the preset behind and the curve becomes your own.</string>
-
     <string name="equalizer_reset">Reset all bands</string>
-
     <string name="equalizer_balance">Balance</string>
-
     <string name="equalizer_balance_left">L</string>
-
     <string name="equalizer_balance_right">R</string>
-
     <string name="equalizer_balance_footer">Shifts the sound towards one ear by quietening the other.</string>
     <string name="equalizer_bitstream_title">現在は動作していません</string>
     <string name="equalizer_bitstream_subtitle">この曲はデコードされずに出力へ送られます</string>
     <string name="equalizer_bitstream_footer">イコライザーはデコード済みの音声に作用します。この曲はデバイス側でデコードするビットストリームとしてそのまま渡されるため、ここには処理できるサンプルがありません。</string>
-
     <string name="system_equalizer">System equalizer</string>
-
     <string name="system_equalizer_subtitle">Your device\'s own panel</string>
-
     <string name="system_equalizer_footer">Runs after Musify\'s， on the whole audio session. Using both applies both.</string>
-
     <string name="eq_preset_flat">Flat</string>
-
     <string name="eq_preset_acoustic">Acoustic</string>
-
     <string name="eq_preset_bass_boost">Bass boost</string>
-
     <string name="eq_preset_bass_cut">Bass cut</string>
-
     <string name="eq_preset_vocal">Vocal</string>
-
     <string name="eq_preset_treble_boost">Treble boost</string>
-
     <string name="eq_preset_treble_cut">Treble cut</string>
-
     <string name="eq_preset_loudness">Loudness</string>
-
     <string name="eq_preset_spoken_word">Spoken word</string>
-
     <string name="eq_preset_electronic">Electronic</string>
-
     <string name="eq_preset_rock">Rock</string>
-
     <string name="eq_preset_hip_hop">Hip-hop</string>
-
     <string name="eq_preset_jazz">Jazz</string>
-
     <string name="eq_preset_classical">Classical</string>
-
     <string name="eq_preset_small_speakers">Small speakers</string>
-
     <string name="eq_preset_late_night">Late night</string>
-
     <string name="eq_preset_custom">Custom</string>
-
     <string name="translation_language">Translation language</string>
-
     <string name="translation_language_description">The language the translate button turns lyrics into.</string>
-
     <string name="translation_language_app_default">App language</string>
-
     <string name="translation_language_subtitle">Follows the app language</string>
-
     <string name="search_languages">Search languages</string>
-
     <string name="no_languages_match">No languages match</string>
-
-
-
     <string name="audio_pipeline">Audio Pipeline</string>
     <string name="cast_dialog_title">Cast</string>
     <string name="cast_dialog_subtitle">Play on a Chromecast or Google Cast speaker</string>
@@ -1193,57 +1001,30 @@
     <string name="cast_track_unsupported">This track can\'t be cast</string>
     <string name="cast_connect_failed">Couldn\'t connect to the receiver</string>
     <string name="audio_pipeline_subtitle">デコーダーから出力までのリアルタイム信号経路</string>
-
     <string name="pipeline_track_info">Track Info</string>
-
     <string name="pipeline_decoder">Decoder</string>
-
     <string name="pipeline_resampler">Resampler</string>
-
     <string name="pipeline_dsp">DSP</string>
-
     <string name="pipeline_output_device">Output Device</string>
-
     <string name="pipeline_source">Source</string>
-
     <string name="pipeline_format">Format</string>
-
     <string name="pipeline_bit_depth">Bit Depth</string>
-
     <string name="pipeline_sample_rate">Sample Rate</string>
-
     <string name="pipeline_bitrate">Bitrate</string>
-
     <string name="pipeline_channels">Channels</string>
-
     <string name="pipeline_decoder_name">Decoder Name</string>
-
     <string name="pipeline_io_rate">I/O Rate</string>
-
     <string name="pipeline_type">Type</string>
-
     <string name="pipeline_cutoff">Cutoff</string>
-
     <string name="pipeline_quality">Quality</string>
-
     <string name="pipeline_pcm_format">PCM Format</string>
-
     <string name="pipeline_eq_preset">EQ Preset</string>
-
     <string name="pipeline_stereo_expand">Stereo Expand</string>
-
     <string name="pipeline_buffers">Buffers</string>
-
     <string name="pipeline_output_api">Output API</string>
-
     <string name="pipeline_device_name">Device Name</string>
-
-
-
     <string name="shared_link">Shared link</string>
-
     <string name="song_will_play_next">Song will play next</string>
-
     <string name="song_added_to_queue">Song added to queue</string>
     <string name="song_added_to_playlist">プレイリストに追加しました</string>
     <string name="song_already_in_playlist">すでにプレイリストにあります</string>
@@ -1254,23 +1035,9 @@
         <item quantity="other">%1$d件のプレイリストに追加しました</item>
     </plurals>
     <string name="party_queue_full">キューがいっぱいです（パーティーの上限は%d曲）</string>
-
     <string name="paxsenix_api_key">PaxSenix API key</string>
-
     <string name="paxsenix_api_key_configured">PaxSenix API key — configured</string>
-
     <string name="paxsenix_api_key_missing">PaxSenix API key — optional， not configured</string>
-
-
-
-
-
-
-
-
-
-
-
     <string name="source_needs_lossless_output">ロスレス出力が必要 · ロスレス対応のデバイスを使用してください</string>
     <string name="source_needs_lossless_bt_codec">ロスレス出力が必要 · Bluetoothは%1$sです。ロスレス対応のデバイスを使用してください</string>
     <string name="source_needs_lossless_bt_unknown">ロスレス出力が必要 · 使用中のBluetoothコーデックを判別できません</string>
@@ -1473,7 +1240,6 @@
     <string name="queue_selected_count">%1$d件選択</string>
     <string name="queue_playlist_added">%2$d曲中%1$d曲を追加しました</string>
     <string name="queue_playlist_partial">%1$s（非対応 %2$d、追加済み %3$d、失敗 %4$d）</string>
-    <!-- Google Drive backup (DriveBackupScreen) -->
     <string name="drive_backup_title">Google ドライブにバックアップ</string>
     <string name="drive_backup_unavailable">Google ドライブへのバックアップには Google Play 開発者サービスが必要ですが、このデバイスにはありません。</string>
     <string name="drive_backup_never">なし</string>
@@ -1493,7 +1259,6 @@
     <string name="drive_frequency_daily">毎日</string>
     <string name="drive_frequency_weekly">毎週</string>
     <string name="drive_frequency_monthly">毎月</string>
-    <!-- Google Drive sync across devices (DriveBackupScreen, DriveDevicesScreen) -->
     <string name="drive_auto_sync_header">自動同期</string>
     <string name="drive_auto_sync_footer">電池残量が少なくないとき、このスマートフォンはバックグラウンドで自分の再生履歴をアップロードし、他のデバイスの履歴をダウンロードします。手動の同期もスケジュールに含まれます。</string>
     <string name="drive_choose_device">このスマートフォンのデバイスを選択</string>
@@ -1559,4 +1324,69 @@
     <string name="poster_studio_save">Save PNG</string>
     <string name="poster_studio_share">Share Poster</string>
     <string name="poster_studio_saved">Poster saved to gallery</string>
+    <string name="automix_art_transition">Art transition</string>
+    <string name="automix_art_transition_subtitle">Smoothly blends cover art between tracks during AutoMix.</string>
+    <string name="automix_mini_art_transition">Mini-player art transition</string>
+    <string name="automix_mini_art_transition_subtitle">Shows artwork transitions in the mini-player during AutoMix.</string>
+    <string name="show_best_part">Best Part button</string>
+    <string name="show_best_part_subtitle">A button on the artwork that skips to the part of the song people replay most</string>
+    <string name="replay_year_open">Open your Replay %1$s</string>
+    <string name="replay_year_building">Building your year…</string>
+    <string name="replay_year_opener_start">Your</string>
+    <string name="replay_year_opener_end">in Musify</string>
+    <string name="replay_year_opener_detail">Let’s look back at what you played.</string>
+    <string name="replay_year_minutes_start">This year you listened for</string>
+    <plurals name="replay_year_minutes_word">
+        <item quantity="one">minute</item>
+        <item quantity="other">minutes</item>
+    </plurals>
+    <string name="replay_year_minutes_days_start">That’s</string>
+    <string name="replay_year_minutes_days_value">%1$s days</string>
+    <string name="replay_year_minutes_hours_value">%1$s hours</string>
+    <string name="replay_year_minutes_days_end">of music.</string>
+    <string name="replay_year_busiest_start">Your biggest day was</string>
+    <string name="replay_year_busiest_minutes">%1$s minutes of music in one day</string>
+    <string name="replay_year_busiest_song">Mostly %1$s</string>
+    <string name="replay_year_clock_start">You came alive around</string>
+    <string name="replay_year_night_owl">Night Owl</string>
+    <string name="replay_year_night_owl_detail">So much of your listening happened after 10 pm.</string>
+    <string name="replay_year_early_bird">Early Riser</string>
+    <string name="replay_year_early_bird_detail">Your days started with music before 10 am.</string>
+    <string name="replay_year_golden_hour">Golden Hour</string>
+    <string name="replay_year_golden_hour_detail">Evenings were when the music came out.</string>
+    <string name="replay_year_daytime">Daytime Drifter</string>
+    <string name="replay_year_daytime_detail">You kept the music going through the day.</string>
+    <string name="replay_year_all_day">Around the Clock</string>
+    <string name="replay_year_all_day_detail">Morning, noon or night, something was playing.</string>
+    <string name="replay_year_genres_start">Your sound this year</string>
+    <string name="replay_year_artist_start">Your top artist this year was…</string>
+    <string name="replay_year_minutes_together">%1$s minutes together</string>
+    <string name="replay_year_top_artists">Your top artists</string>
+    <string name="replay_year_song_start">And your song of the year…</string>
+    <plurals name="replay_year_played_times">
+        <item quantity="one">Played %1$s time</item>
+        <item quantity="other">Played %1$s times</item>
+    </plurals>
+    <string name="replay_year_top_songs">The rest of your top songs</string>
+    <string name="replay_year_albums">Albums you lived in</string>
+    <string name="replay_year_months">Your year, month by month</string>
+    <string name="replay_year_discovery_start">This year you explored</string>
+    <plurals name="replay_year_songs_word">
+        <item quantity="one">song</item>
+        <item quantity="other">songs</item>
+    </plurals>
+    <plurals name="replay_year_artists_word">
+        <item quantity="one">artist</item>
+        <item quantity="other">artists</item>
+    </plurals>
+    <plurals name="replay_year_albums_word">
+        <item quantity="one">album</item>
+        <item quantity="other">albums</item>
+    </plurals>
+    <string name="replay_year_summary_title">Your %1$s</string>
+    <string name="replay_year_summary_artists">Top artists</string>
+    <string name="replay_year_summary_songs">Top songs</string>
+    <string name="replay_year_summary_minutes">Minutes listened</string>
+    <string name="replay_year_mute">Mute the story</string>
+    <string name="replay_year_unmute">Unmute the story</string>
 </resources>

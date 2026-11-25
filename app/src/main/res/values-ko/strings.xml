@@ -1,3 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Musify</string>
     <string name="playback_channel_name">지금 재생 중</string>
@@ -751,7 +752,7 @@
     <string name="not_enough_this_month">리플레이를 보려면 이달에 몇 곡을 더 들으세요.</string>
     <string name="not_enough_this_week">리플레이를 보려면 이주에 몇 곡을 더 들으세요.</string>
     <string name="pinned">고정</string>
-    <string name="replay_across"></string>
+    <string name="replay_across" />
     <string name="replay_album_end">이 이목을 끌었어요.</string>
     <string name="replay_album_focus">한 앨범</string>
     <string name="replay_album_start">이번에는, </string>
@@ -929,8 +930,6 @@
     <string name="use_this_profile">이 프로필 사용</string>
     <string name="switch_profile_hint">아바타를 골라 전환하고, 이 프로필을 사용하세요.</string>
     <string name="profile_unavailable">아직 이 페이지에서 이용할 수 있는 로그인한 프로필이 없습니다.</string>
-
-    <!-- Listen together -->
     <string name="listen_together">함께 듣기</string>
     <string name="listen_together_subtitle">코드를 공유하고 같은 시간에, 같은 음악을 재생합니다</string>
     <string name="listen_together_in_party">파티 중 · %1$s</string>
@@ -1031,11 +1030,8 @@
     <string name="listen_together_status_custom_fallback">맞춤 서버 연결 불가 · 기본 폴백 사용 중 (%1$d ms)</string>
     <string name="listen_together_status_all_offline">맞춤 서버와 기본 서버 모두 오프라인입니다</string>
     <string name="listen_together_top_bar_fallback">폴백 · %1$s</string>
-
     <string name="vietnamese">베트남어</string>
-
     <string name="miscellaneous_footer">켠 경우 최근 앱 화면에서 앱을 닫으면 음악 재생도 멈춥니다.</string>
-
     <string name="export_compatible_downloads">호환되는 다운로드 내보내기</string>
     <string name="sync_downloaded_playlists">재생목록 최신 상태로 유지</string>
     <string name="sync_downloaded_playlists_subtitle">하루 두 번 확인하여 다운로드한 재생목록에 새로 추가된 노래를 다운로드합니다</string>
@@ -1045,129 +1041,66 @@
     <string name="playlist_sync_ask_text">탭하여 다운로드</string>
     <string name="playlist_sync_done_title">%1$s에 추가됨: %2$d</string>
     <string name="playlist_updates_channel">재생목록 업데이트</string>
-
     <string name="output_precision">출력 정확도</string>
-
     <string name="prefer_usb_dac">USB DAC 우선</string>
-
     <string name="loudness_normalization">체감 음량 평준화</string>
-
     <string name="loudness_normalization_subtitle">모든 음악의 체감 음량을 같게 조절합니다</string>
     <string name="loudness_off_on_speaker">폰 스피커에서 비활성화</string>
-
     <string name="loudness_target">목표 체감 음량</string>
-
     <string name="loudness_target_subtitle">조용할수록 헤드폰에 적합하고, 클수록 차량이나 폰 스피커에 적합합니다</string>
-
     <string name="loudness_target_value">%1$s LUFS</string>
-
     <string name="pipeline_loudness">체감 음량</string>
-
     <string name="pipeline_loudness_gain">이득</string>
-
     <string name="pipeline_loudness_measured">측정됨</string>
-
     <string name="pipeline_bit_exact">비트 일치</string>
-
     <string name="loudness_measuring">측정 중…</string>
-
     <string name="loudness_gain_db">%1$s dB</string>
-
     <string name="loudness_lufs">%1$s LUFS</string>
-
     <string name="blur_unfocused_lyrics">주변 가사 흐림</string>
-
     <string name="blur_unfocused_lyrics_subtitle">현재 가사 줄을 돋보이게 합니다</string>
-
-
     <string name="lyrics_debug_logs">가사 디버그 로그</string>
-
     <string name="lyrics_debug_logs_subtitle">가사 창에 실시간 API 쿼리와 스크래퍼 활동 표시</string>
-
     <string name="shelf_trending_community_playlists">인기 급상승 커뮤니티 재생목록</string>
-
     <string name="shelf_featured_playlists_for_you">나를 위한 추천 재생목록</string>
-
     <string name="shelf_quick_picks">빠른 선곡</string>
-
     <string name="shelf_listen_again">다시 듣기</string>
-
     <string name="shelf_mixed_for_you">맞춤 믹스</string>
-
     <string name="shelf_similar_to">%1$s 느낌 음악</string>
-
     <string name="shelf_forgotten_favorites">잊고 있던 좋은 음악</string>
-
     <string name="shelf_recommended_music_videos">맞춤 추천 뮤직비디오</string>
-
     <string name="shelf_from_your_library">내 라이브러리</string>
-
     <string name="shelf_charts">차트</string>
-
     <string name="shelf_new_releases">최신 음악</string>
-
     <string name="shelf_top_music_videos">인기 뮤직비디오</string>
-
     <string name="shelf_for_you">맞춤 추천</string>
-
     <string name="shelf_energy_boosters">에너지 충전</string>
-
     <string name="shelf_feel_good">행복한 기분</string>
-
     <string name="shelf_commute">출퇴근길</string>
-
     <string name="shelf_workout">운동</string>
-
     <string name="shelf_focus">집중</string>
-
     <string name="shelf_relax">휴식</string>
-
     <string name="shelf_sleep">잠자기</string>
-
     <string name="shelf_party">파티</string>
-
     <string name="shelf_romance">로맨스</string>
-
     <string name="shelf_sad">슬픔</string>
-
     <string name="shelf_100_on_repeat">무한 반복한 곡</string>
-
     <string name="shelf_new_albums_singles">새 앨범 및 싱글</string>
-
     <string name="shelf_hits_today">오늘의 히트곡</string>
-
     <string name="shelf_artists_on_the_rise">떠오르는 아티스트</string>
-
-
     <string name="shelf_top_tunes_right_now">지금 뜨는 음악</string>
-
     <string name="shelf_concerts">콘서트</string>
-
     <string name="shelf_shorts">Shorts</string>
-
     <string name="shelf_single">싱글</string>
-
     <string name="shelf_chart">차트</string>
-
     <string name="shelf_song_item">음악</string>
-
     <string name="shelf_from_the_community">커뮤니티 제공</string>
-
     <string name="shelf_youtube_charts">YouTube 차트</string>
-
     <string name="shelf_trending">인기 급상승</string>
-
     <string name="shelf_recents">최근</string>
-
     <string name="subscriptions">구독</string>
-
-
     <string name="card_views_format">조회수 %1$s회</string>
-
     <string name="card_plays_format">재생 %1$s회</string>
-
     <string name="card_songs_format">음악 %1$s곡</string>
-
     <string name="source_needs_lossless_output">무손실 출력 필요 · 무손실 지원 기기를 사용하세요</string>
     <string name="source_needs_lossless_bt_codec">무손실 출력 필요 · %1$s 코덱 블루투스가 켜졌습니다. 무손실 지원 기기를 사용하세요</string>
     <string name="source_needs_lossless_bt_unknown">무손실 출력 필요 · 어떤 블루투스 코덱을 사용 중인지 알 수 없습니다</string>
@@ -1214,7 +1147,6 @@
     <string name="onboarding_sign_in_google">Google로 로그인</string>
     <string name="onboarding_skip_sign_in">로그인 건너뛰기</string>
     <string name="onboarding_back">뒤로</string>
-    <!-- Settings: BitChord for Wear OS -->
     <string name="wear_os_section">Wear OS용 Musify</string>
     <string name="wear_os_page_title">Wear OS</string>
     <string name="wear_os_your_watches">내 워치</string>
@@ -1345,7 +1277,6 @@
     <string name="queue_selected_count">%1$d개 선택됨</string>
     <string name="queue_playlist_added">%2$d곡 중 %1$d곡 추가됨</string>
     <string name="queue_playlist_partial">%1$s (호환되지 않음 %2$d, 이미 있음 %3$d, 실패 %4$d)</string>
-    <!-- Google Drive backup (DriveBackupScreen) -->
     <string name="drive_backup_title">Google 드라이브 백업</string>
     <string name="drive_backup_unavailable">Google 드라이브 백업에는 Google Play 서비스가 필요하지만 이 기기에는 없습니다.</string>
     <string name="drive_backup_never">없음</string>
@@ -1365,7 +1296,6 @@
     <string name="drive_frequency_daily">매일</string>
     <string name="drive_frequency_weekly">매주</string>
     <string name="drive_frequency_monthly">매월</string>
-    <!-- Google Drive sync across devices (DriveBackupScreen, DriveDevicesScreen) -->
     <string name="drive_auto_sync_header">자동 동기화</string>
     <string name="drive_auto_sync_footer">배터리가 부족하지 않을 때 이 휴대전화가 백그라운드에서 감상 기록을 업로드하고 다른 기기의 기록을 다운로드합니다. 직접 실행한 동기화도 일정에 포함됩니다.</string>
     <string name="drive_choose_device">이 휴대전화의 기기 선택</string>
@@ -1431,4 +1361,69 @@
     <string name="poster_studio_save">Save PNG</string>
     <string name="poster_studio_share">Share Poster</string>
     <string name="poster_studio_saved">Poster saved to gallery</string>
+    <string name="automix_art_transition">Art transition</string>
+    <string name="automix_art_transition_subtitle">Smoothly blends cover art between tracks during AutoMix.</string>
+    <string name="automix_mini_art_transition">Mini-player art transition</string>
+    <string name="automix_mini_art_transition_subtitle">Shows artwork transitions in the mini-player during AutoMix.</string>
+    <string name="show_best_part">Best Part button</string>
+    <string name="show_best_part_subtitle">A button on the artwork that skips to the part of the song people replay most</string>
+    <string name="replay_year_open">Open your Replay %1$s</string>
+    <string name="replay_year_building">Building your year…</string>
+    <string name="replay_year_opener_start">Your</string>
+    <string name="replay_year_opener_end">in Musify</string>
+    <string name="replay_year_opener_detail">Let’s look back at what you played.</string>
+    <string name="replay_year_minutes_start">This year you listened for</string>
+    <plurals name="replay_year_minutes_word">
+        <item quantity="one">minute</item>
+        <item quantity="other">minutes</item>
+    </plurals>
+    <string name="replay_year_minutes_days_start">That’s</string>
+    <string name="replay_year_minutes_days_value">%1$s days</string>
+    <string name="replay_year_minutes_hours_value">%1$s hours</string>
+    <string name="replay_year_minutes_days_end">of music.</string>
+    <string name="replay_year_busiest_start">Your biggest day was</string>
+    <string name="replay_year_busiest_minutes">%1$s minutes of music in one day</string>
+    <string name="replay_year_busiest_song">Mostly %1$s</string>
+    <string name="replay_year_clock_start">You came alive around</string>
+    <string name="replay_year_night_owl">Night Owl</string>
+    <string name="replay_year_night_owl_detail">So much of your listening happened after 10 pm.</string>
+    <string name="replay_year_early_bird">Early Riser</string>
+    <string name="replay_year_early_bird_detail">Your days started with music before 10 am.</string>
+    <string name="replay_year_golden_hour">Golden Hour</string>
+    <string name="replay_year_golden_hour_detail">Evenings were when the music came out.</string>
+    <string name="replay_year_daytime">Daytime Drifter</string>
+    <string name="replay_year_daytime_detail">You kept the music going through the day.</string>
+    <string name="replay_year_all_day">Around the Clock</string>
+    <string name="replay_year_all_day_detail">Morning, noon or night, something was playing.</string>
+    <string name="replay_year_genres_start">Your sound this year</string>
+    <string name="replay_year_artist_start">Your top artist this year was…</string>
+    <string name="replay_year_minutes_together">%1$s minutes together</string>
+    <string name="replay_year_top_artists">Your top artists</string>
+    <string name="replay_year_song_start">And your song of the year…</string>
+    <plurals name="replay_year_played_times">
+        <item quantity="one">Played %1$s time</item>
+        <item quantity="other">Played %1$s times</item>
+    </plurals>
+    <string name="replay_year_top_songs">The rest of your top songs</string>
+    <string name="replay_year_albums">Albums you lived in</string>
+    <string name="replay_year_months">Your year, month by month</string>
+    <string name="replay_year_discovery_start">This year you explored</string>
+    <plurals name="replay_year_songs_word">
+        <item quantity="one">song</item>
+        <item quantity="other">songs</item>
+    </plurals>
+    <plurals name="replay_year_artists_word">
+        <item quantity="one">artist</item>
+        <item quantity="other">artists</item>
+    </plurals>
+    <plurals name="replay_year_albums_word">
+        <item quantity="one">album</item>
+        <item quantity="other">albums</item>
+    </plurals>
+    <string name="replay_year_summary_title">Your %1$s</string>
+    <string name="replay_year_summary_artists">Top artists</string>
+    <string name="replay_year_summary_songs">Top songs</string>
+    <string name="replay_year_summary_minutes">Minutes listened</string>
+    <string name="replay_year_mute">Mute the story</string>
+    <string name="replay_year_unmute">Unmute the story</string>
 </resources>
