@@ -1417,4 +1417,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">ייצוא רשימת השמעה ונתונים</string>
+    <string name="export_playlist_subtitle">שמירה, שיתוף או העתקה בפורמטים תקניים</string>
+    <string name="export_choose_source">בחירת מקור</string>
+    <string name="export_choose_format">פורמט ייצוא</string>
+    <string name="export_empty_source">אין שירים לייצוא בבחירה זו</string>
+    <string name="export_save_file">שמירת קובץ</string>
+    <string name="export_copy_text">העתקה ללוח</string>
+    <string name="export_copied_clipboard">ייצוא %1$s הועתק</string>
+    <string name="export_playlist_saved">נשמרו %1$d שירים (%2$s)</string>
+    <string name="export_playlist_action">ייצוא רשימה (M3U / CSV וכו׳)</string>
+    <string name="export_playlist_data">ייצוא רשימות ושירים</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT או JSON</string>
+    <string name="auto_signing_in">משלים התחברות…</string>
 </resources>

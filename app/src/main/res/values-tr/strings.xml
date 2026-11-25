@@ -1413,4 +1413,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">Çalma listesi ve verileri dışa aktar</string>
+    <string name="export_playlist_subtitle">Parçaları standart biçimlerde kaydet, paylaş veya kopyala</string>
+    <string name="export_choose_source">Kaynak seç</string>
+    <string name="export_choose_format">Dışa aktarma biçimi</string>
+    <string name="export_empty_source">Burada dışa aktarılacak parça yok</string>
+    <string name="export_save_file">Dosyayı kaydet</string>
+    <string name="export_copy_text">Panoya kopyala</string>
+    <string name="export_copied_clipboard">%1$s dışa aktarımı kopyalandı</string>
+    <string name="export_playlist_saved">%1$d parça kaydedildi (%2$s)</string>
+    <string name="export_playlist_action">Çalma listesini dışa aktar (M3U / CSV / vb.)</string>
+    <string name="export_playlist_data">Çalma listelerini ve parçaları dışa aktar</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT veya JSON</string>
+    <string name="auto_signing_in">Oturum açma tamamlanıyor…</string>
 </resources>

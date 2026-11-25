@@ -1447,4 +1447,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">Экспорт плейлиста и данных</string>
+    <string name="export_playlist_subtitle">Сохраняйте, делитесь или копируйте треки в стандартных форматах</string>
+    <string name="export_choose_source">Выберите источник</string>
+    <string name="export_choose_format">Формат экспорта</string>
+    <string name="export_empty_source">Нет треков для экспорта</string>
+    <string name="export_save_file">Сохранить файл</string>
+    <string name="export_copy_text">Копировать в буфер</string>
+    <string name="export_copied_clipboard">Экспорт %1$s скопирован</string>
+    <string name="export_playlist_saved">Сохранено треков: %1$d (%2$s)</string>
+    <string name="export_playlist_action">Экспортировать плейлист (M3U / CSV и др.)</string>
+    <string name="export_playlist_data">Экспорт плейлистов и треков</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT или JSON</string>
+    <string name="auto_signing_in">Завершение входа…</string>
 </resources>

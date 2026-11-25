@@ -53,7 +53,7 @@ import com.music.bitchord.ui.tv.theme.TvType
 // Discord Rich Presence is hidden on TV for now; TvDiscordDialog is kept for when it returns.
 private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, Update, About }
 
-private const val DefaultBlurb = "Playback, sound and display preferences for BitChord on this TV."
+private const val DefaultBlurb = "Playback, sound and display preferences for Musify on this TV."
 
 /**
  * Settings, as tvOS lays it out: the app on the left with a plain description of

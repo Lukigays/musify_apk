@@ -1389,4 +1389,17 @@
     <string name="replay_year_summary_minutes">Menit didengarkan</string>
     <string name="replay_year_mute">Bisukan cerita</string>
     <string name="replay_year_unmute">Nyalakan suara cerita</string>
+    <string name="export_playlist_title">Ekspor playlist &amp; data</string>
+    <string name="export_playlist_subtitle">Simpan, bagikan, atau salin daftar lagu dalam format standar</string>
+    <string name="export_choose_source">Pilih sumber</string>
+    <string name="export_choose_format">Format ekspor</string>
+    <string name="export_empty_source">Tidak ada lagu untuk diekspor pada pilihan ini</string>
+    <string name="export_save_file">Simpan file</string>
+    <string name="export_copy_text">Salin ke papan klip</string>
+    <string name="export_copied_clipboard">Hasil ekspor %1$s disalin</string>
+    <string name="export_playlist_saved">%1$d lagu disimpan (%2$s)</string>
+    <string name="export_playlist_action">Ekspor playlist (M3U / CSV / dll.)</string>
+    <string name="export_playlist_data">Ekspor playlist &amp; lagu</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, atau JSON</string>
+    <string name="auto_signing_in">Menyelesaikan login…</string>
 </resources>

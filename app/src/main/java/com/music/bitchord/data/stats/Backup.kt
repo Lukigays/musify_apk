@@ -56,7 +56,7 @@ object Backup {
 
     /** A suggested filename, dated so successive exports don't collide. */
     fun suggestedName(): String =
-        "bitchord-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
+        "musify-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
             Instant.now().atZone(ZoneId.systemDefault()),
         )}.json"
 
@@ -126,10 +126,10 @@ object Backup {
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun readFrom(input: InputStream): Summary = withContext(Dispatchers.IO) {
         val file = runCatching { json.decodeFromStream(BackupFile.serializer(), input) }
-            .getOrElse { error("That doesn't look like a BitChord backup") }
-        require(file.app == APP_TAG) { "That backup is from another app" }
+            .getOrElse { error("That doesn't look like a Musify backup") }
+        require(file.app == APP_TAG || file.app == LEGACY_APP_TAG) { "That backup is from another app" }
         require(file.version <= SCHEMA_VERSION) {
-            "That backup was written by a newer version of BitChord"
+            "That backup was written by a newer version of Musify"
         }
 
         ListeningStats.importAll(file.listening)
@@ -153,7 +153,8 @@ object Backup {
         val at: String,
     )
 
-    private const val APP_TAG = "bitchord"
+    private const val APP_TAG = "musify"
+    private const val LEGACY_APP_TAG = "bitchord"
 
     /**
      * Bump when the shape below stops being readable by an older build. A file

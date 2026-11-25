@@ -1426,4 +1426,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">재생목록 및 데이터 내보내기</string>
+    <string name="export_playlist_subtitle">표준 형식으로 저장, 공유 또는 복사</string>
+    <string name="export_choose_source">대상 선택</string>
+    <string name="export_choose_format">내보내기 형식</string>
+    <string name="export_empty_source">내보낼 곡이 없습니다</string>
+    <string name="export_save_file">파일 저장</string>
+    <string name="export_copy_text">클립보드에 복사</string>
+    <string name="export_copied_clipboard">%1$s 내보내기 복사됨</string>
+    <string name="export_playlist_saved">%1$d곡 저장됨 (%2$s)</string>
+    <string name="export_playlist_action">재생목록 내보내기 (M3U / CSV 등)</string>
+    <string name="export_playlist_data">재생목록 및 곡 내보내기</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT 또는 JSON</string>
+    <string name="auto_signing_in">로그인 완료 중…</string>
 </resources>

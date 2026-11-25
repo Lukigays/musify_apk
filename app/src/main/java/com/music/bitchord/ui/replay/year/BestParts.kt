@@ -188,7 +188,7 @@ object BestParts {
         fun heatmap(): Heatmap? = if (segmentMs > 0 && intensity.isNotEmpty()) Heatmap(segmentMs, intensity) else null
     }
 
-    private const val TAG = "BitChordBestPart"
+    private const val TAG = "MusifyBestPart"
     private const val FILE_NAME = "replay_heatmaps.json"
     private const val MAX_KEPT = 500
     private const val HEATMAP_TIMEOUT_MS = 8_000L

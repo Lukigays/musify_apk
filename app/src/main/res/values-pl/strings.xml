@@ -1452,4 +1452,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">Eksportuj playlistę i dane</string>
+    <string name="export_playlist_subtitle">Zapisz, udostępnij lub skopiuj utwory w standardowych formatach</string>
+    <string name="export_choose_source">Wybierz źródło</string>
+    <string name="export_choose_format">Format eksportu</string>
+    <string name="export_empty_source">Brak utworów do eksportu</string>
+    <string name="export_save_file">Zapisz plik</string>
+    <string name="export_copy_text">Kopiuj do schowka</string>
+    <string name="export_copied_clipboard">Skopiowano eksport %1$s</string>
+    <string name="export_playlist_saved">Zapisano %1$d utworów (%2$s)</string>
+    <string name="export_playlist_action">Eksportuj playlistę (M3U / CSV / itp.)</string>
+    <string name="export_playlist_data">Eksportuj playlisty i utwory</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT lub JSON</string>
+    <string name="auto_signing_in">Kończenie logowania…</string>
 </resources>

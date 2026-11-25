@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import com.music.bitchord.ui.theme.MusifyCoral
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -184,7 +185,8 @@ fun FloatingBottomBar(
     /** Called when the user taps the currently active tab (scroll-to-top). */
     onActiveTabTap: () -> Unit = {},
 ) {
-    val pillShape = RoundedCornerShape(percent = 50)
+    val pillShape = RoundedCornerShape(24.dp)
+    val indicatorShape = RoundedCornerShape(20.dp)
     val container = MaterialTheme.colorScheme.surface
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
@@ -285,8 +287,9 @@ fun FloatingBottomBar(
                         scaleX = 1f + lag * STRETCH
                         scaleY = 1f - lag * STRETCH * SQUASH
                     }
-                    .clip(pillShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    .clip(indicatorShape)
+                    .background(MusifyCoral.copy(alpha = 0.20f))
+                    .border(0.75.dp, MusifyCoral.copy(alpha = 0.36f), indicatorShape),
             )
         }
 
@@ -383,7 +386,7 @@ private fun BottomBarItem(
     val haptics = rememberHaptics()
     val tint by animateColorAsState(
         targetValue = if (selected) {
-            selectedTint ?: MaterialTheme.colorScheme.primary
+            selectedTint ?: MusifyCoral
         } else {
             unselectedTint ?: MaterialTheme.colorScheme.onSurfaceVariant
         },

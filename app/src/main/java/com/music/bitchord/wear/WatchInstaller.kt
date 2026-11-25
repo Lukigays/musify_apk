@@ -61,9 +61,9 @@ import com.music.bitchord.wear.WearProtocol as P
  */
 object WatchInstaller {
 
-    private const val TAG = "BitChordWear"
-    private const val APK_ASSET = "wear/BitChordWear.apk"
-    private const val SHA_ASSET = "wear/BitChordWear.sha256"
+    private const val TAG = "MusifyWear"
+    private const val APK_ASSET = "wear/MusifyWear.apk"
+    private const val SHA_ASSET = "wear/MusifyWear.sha256"
     private const val PAIRING_SERVICE = "_adb-tls-pairing._tcp"
     private const val CONNECT_SERVICE = "_adb-tls-connect._tcp"
 
@@ -218,16 +218,16 @@ object WatchInstaller {
     private fun openOnWatch(app: Context, nodeId: String) {
         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
             .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
-            .setData(Uri.parse("bitchord-wear://${app.packageName}/update"))
+            .setData(Uri.parse("musify-wear://${app.packageName}/update"))
         runCatching { RemoteActivityHelper(app).startRemoteActivity(intent, nodeId).get(15, TimeUnit.SECONDS) }
             .onFailure { Log.w(TAG, "couldn't open the watch app: ${it.message}") }
     }
 
     /** The bundled APK, as a file — sendFile and the ADB stream both want one. */
     private fun bundledApk(app: Context): File {
-        val target = File(app.cacheDir, "wear/BitChordWear.apk")
+        val target = File(app.cacheDir, "wear/MusifyWear.apk")
         val hash = bundledHash(app)
-        val stamp = File(target.parentFile, "BitChordWear.sha256")
+        val stamp = File(target.parentFile, "MusifyWear.sha256")
         if (target.exists() && stamp.exists() && stamp.readText() == hash) return target
         target.parentFile?.mkdirs()
         app.assets.open(APK_ASSET).use { input -> target.outputStream().use { input.copyTo(it) } }
@@ -396,7 +396,7 @@ object WatchInstaller {
                 cert = certFile.inputStream().use { CertificateFactory.getInstance("X.509").generateCertificate(it) }
             } else {
                 val pair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
-                val name = X500Name("CN=BitChord")
+                val name = X500Name("CN=Musify")
                 val now = System.currentTimeMillis()
                 val holder = JcaX509v3CertificateBuilder(
                     name,
@@ -415,6 +415,6 @@ object WatchInstaller {
 
         override fun getPrivateKey(): PrivateKey = key
         override fun getCertificate(): Certificate = cert
-        override fun getDeviceName(): String = "BitChord"
+        override fun getDeviceName(): String = "Musify"
     }
 }

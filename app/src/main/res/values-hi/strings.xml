@@ -1413,4 +1413,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">प्लेलिस्ट और डेटा निर्यात करें</string>
+    <string name="export_playlist_subtitle">मानक फ़ॉर्मेट में गाने सहेजें, साझा करें या कॉपी करें</string>
+    <string name="export_choose_source">स्रोत चुनें</string>
+    <string name="export_choose_format">निर्यात फ़ॉर्मेट</string>
+    <string name="export_empty_source">निर्यात करने के लिए कोई गाना नहीं है</string>
+    <string name="export_save_file">फ़ाइल सहेजें</string>
+    <string name="export_copy_text">क्लिपबोर्ड पर कॉपी करें</string>
+    <string name="export_copied_clipboard">%1$s निर्यात कॉपी किया गया</string>
+    <string name="export_playlist_saved">%1$d गाने सहेजे गए (%2$s)</string>
+    <string name="export_playlist_action">प्लेलिस्ट निर्यात करें (M3U / CSV / आदि)</string>
+    <string name="export_playlist_data">प्लेलिस्ट और गाने निर्यात करें</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, या JSON</string>
+    <string name="auto_signing_in">साइन-इन पूरा हो रहा है…</string>
 </resources>

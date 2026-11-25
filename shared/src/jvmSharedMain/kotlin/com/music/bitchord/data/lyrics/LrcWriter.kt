@@ -69,7 +69,8 @@ private fun LyricLine.flattened(): String =
  * [LyricLine.endMs] across — without it the last word of every line would come
  * back with no end, and the player reads a silence out of that.
  */
-const val WORD_LYRICS_FIELD = "BITCHORD_LYRICS"
+const val WORD_LYRICS_FIELD = "MUSIFY_LYRICS"
+const val LEGACY_WORD_LYRICS_FIELD = "BITCHORD_LYRICS"
 
 fun List<LyricLine>.toEnhancedLrc(): String {
     if (isEmpty()) return ""

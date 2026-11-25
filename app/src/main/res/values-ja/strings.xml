@@ -1389,4 +1389,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">プレイリストとデータをエクスポート</string>
+    <string name="export_playlist_subtitle">標準形式で保存・共有・コピー</string>
+    <string name="export_choose_source">エクスポート元を選択</string>
+    <string name="export_choose_format">出力形式</string>
+    <string name="export_empty_source">エクスポートできる曲がありません</string>
+    <string name="export_save_file">ファイルを保存</string>
+    <string name="export_copy_text">クリップボードにコピー</string>
+    <string name="export_copied_clipboard">%1$s の出力をコピーしました</string>
+    <string name="export_playlist_saved">%1$d 曲を保存しました（%2$s）</string>
+    <string name="export_playlist_action">プレイリストをエクスポート (M3U / CSV など)</string>
+    <string name="export_playlist_data">プレイリストと曲をエクスポート</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, JSON</string>
+    <string name="auto_signing_in">サインインを完了しています…</string>
 </resources>

@@ -3989,7 +3989,7 @@ class CrossfadeController(
         /** How long the popup's preview outlives the last plan that laid it out. */
         const val MIX_PREVIEW_STALE_MS = 1_500L
 
-        const val TAG = "BitChordCrossfade"
+        const val TAG = "MusifyCrossfade"
 
         /**
          * Used only before a pair has been analysed, or when the evidence is

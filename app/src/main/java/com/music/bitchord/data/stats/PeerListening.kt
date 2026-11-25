@@ -38,7 +38,7 @@ object PeerListening {
 
     private const val DIRECTORY = "listening-peers"
     private const val INDEX = "index.json"
-    private const val TAG = "BitChordPeers"
+    private const val TAG = "MusifyPeers"
 
     private val json = Json {
         ignoreUnknownKeys = true

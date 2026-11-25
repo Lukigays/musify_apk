@@ -1389,4 +1389,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">Xuất danh sách phát &amp; dữ liệu</string>
+    <string name="export_playlist_subtitle">Lưu, chia sẻ hoặc sao chép bài hát theo định dạng chuẩn</string>
+    <string name="export_choose_source">Chọn nguồn</string>
+    <string name="export_choose_format">Định dạng xuất</string>
+    <string name="export_empty_source">Không có bài hát nào để xuất</string>
+    <string name="export_save_file">Lưu tệp</string>
+    <string name="export_copy_text">Sao chép vào bộ nhớ tạm</string>
+    <string name="export_copied_clipboard">Đã sao chép bản xuất %1$s</string>
+    <string name="export_playlist_saved">Đã lưu %1$d bài hát (%2$s)</string>
+    <string name="export_playlist_action">Xuất playlist (M3U / CSV / v.v.)</string>
+    <string name="export_playlist_data">Xuất playlist &amp; bài hát</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT hoặc JSON</string>
+    <string name="auto_signing_in">Đang hoàn tất đăng nhập…</string>
 </resources>

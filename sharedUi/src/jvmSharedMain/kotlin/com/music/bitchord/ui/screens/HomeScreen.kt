@@ -49,12 +49,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.music.bitchord.ui.theme.MusifyCoral
+import com.music.bitchord.ui.theme.MusifyCoralSoft
+import com.music.bitchord.ui.theme.MusifyRose
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cached
 import androidx.compose.material.icons.rounded.Folder
@@ -166,12 +173,27 @@ fun HomeScreen(
     // LocalArtworkScrolling for why that is asked rather than provided.
     PausedWhileScrolling(listState) {
 
-    PullToRefresh(
-        refreshing = refreshing,
-        onRefresh = onRefresh,
-        state = pullState,
-        modifier = modifier,
-    ) {
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MusifyCoral.copy(alpha = 0.14f),
+                            MusifyRose.copy(alpha = 0.05f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+        PullToRefresh(
+            refreshing = refreshing,
+            onRefresh = onRefresh,
+            state = pullState,
+            modifier = Modifier.fillMaxSize(),
+        ) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -240,6 +262,7 @@ fun HomeScreen(
                 }
             }
         }
+    }
     }
 
     }
@@ -467,32 +490,50 @@ private fun HomeTitle(
     val style = MaterialTheme.typography.displayLarge
     val logoHeight = with(LocalDensity.current) { (style.fontSize * LOGO_TO_FONT).toDp() }
     Column(modifier = modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp)) {
-        // The wordmark, and the year story's button right after it when there
-        // is a year to tell. Sized off the wordmark so the two keep their
-        // proportion under the system font scale.
         Row(
             modifier = Modifier.padding(bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_logo),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
+            Box(
                 modifier = Modifier
-                    .height(logoHeight)
-                    .aspectRatio(LOGO_ASPECT),
+                    .size(logoHeight * 1.18f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(MusifyCoralSoft, MusifyCoral, MusifyRose),
+                        ),
+                    )
+                    .border(
+                        width = 0.75.dp,
+                        color = Color.White.copy(alpha = 0.25f),
+                        shape = RoundedCornerShape(11.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_logo),
+                    contentDescription = "Musify",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .height(logoHeight * 0.64f)
+                        .aspectRatio(LOGO_ASPECT),
+                )
+            }
+            Spacer(Modifier.width(11.dp))
+            Text(
+                text = "Musify",
+                style = style.copy(
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.6).sp,
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
             )
             if (replayYear != null) {
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
                 ReplayYearButton(replayYear, height = logoHeight * 0.68f)
             }
         }
-        // "Listen now" is hidden for now; the wordmark above stays.
-        // Text(
-        //     text = title,
-        //     style = style,
-        //     color = MaterialTheme.colorScheme.onBackground,
-        // )
     }
 }
 
@@ -541,7 +582,7 @@ internal fun SectionHeader(title: String, subtitle: String = "", onShowAll: (() 
             Text(
                 text = stringResource(Res.string.show_all),
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MusifyCoral,
                 modifier = Modifier
                     .clickable(onClick = onShowAll)
                     .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
@@ -906,7 +947,7 @@ private fun ServiceCard(colors: List<Color>, trackKey: String, icon: ImageVector
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center,
     ) {
         MeshGradientBackground(
@@ -943,12 +984,12 @@ internal fun ShelfCard(
     ) {
         when (item.browseId) {
             "local:downloads" -> {
-                val palette = remember { MeshPalette(listOf(Color(0xFF1E3C72), Color(0xFF2A5298))) }
+                val palette = remember { MeshPalette(listOf(MusifyRose, Color(0xFF4F46E5))) }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     MeshGradientBackground(
@@ -966,22 +1007,22 @@ internal fun ShelfCard(
                 }
             }
             "local:all" -> ServiceCard(
-                colors = listOf(Color(0xFF134E5E), Color(0xFF71B280)),
+                colors = listOf(Color(0xFF0F766E), Color(0xFF14B8A6)),
                 trackKey = "local:all",
                 icon = Icons.Rounded.LibraryMusic,
             )
             "local:cache" -> ServiceCard(
-                colors = listOf(Color(0xFF42275A), Color(0xFF734B6D)),
+                colors = listOf(Color(0xFF6D28D9), MusifyCoral),
                 trackKey = "local:cache",
                 icon = Icons.Rounded.Cached,
             )
             "local:webdav" -> ServiceCard(
-                colors = listOf(Color(0xFF3A1C71), Color(0xFFD76D77)),
+                colors = listOf(Color(0xFF312E81), Color(0xFFEC4899)),
                 trackKey = "local:webdav",
                 icon = Icons.Rounded.Folder,
             )
             "local:smb" -> ServiceCard(
-                colors = listOf(Color(0xFF0F2027), Color(0xFF2C5364)),
+                colors = listOf(Color(0xFF111827), Color(0xFF0284C7)),
                 trackKey = "local:smb",
                 icon = Icons.Rounded.Storage,
             )
@@ -990,8 +1031,8 @@ internal fun ShelfCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .thumbnailBorder(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(16.dp))
+                        .thumbnailBorder(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     AsyncImage(

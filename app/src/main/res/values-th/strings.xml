@@ -1389,4 +1389,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">ส่งออกเพลย์ลิสต์และข้อมูล</string>
+    <string name="export_playlist_subtitle">บันทึก แชร์ หรือคัดลอกรายการเพลงในรูปแบบมาตรฐาน</string>
+    <string name="export_choose_source">เลือกแหล่งข้อมูล</string>
+    <string name="export_choose_format">รูปแบบการส่งออก</string>
+    <string name="export_empty_source">ไม่มีเพลงให้ส่งออกในรายการนี้</string>
+    <string name="export_save_file">บันทึกไฟล์</string>
+    <string name="export_copy_text">คัดลอกไปยังคลิปบอร์ด</string>
+    <string name="export_copied_clipboard">คัดลอกข้อมูลส่งออก %1$s แล้ว</string>
+    <string name="export_playlist_saved">บันทึกแล้ว %1$d เพลง (%2$s)</string>
+    <string name="export_playlist_action">ส่งออกเพลย์ลิสต์ (M3U / CSV ฯลฯ)</string>
+    <string name="export_playlist_data">ส่งออกเพลย์ลิสต์และเพลง</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT หรือ JSON</string>
+    <string name="auto_signing_in">กำลังเข้าสู่ระบบ…</string>
 </resources>

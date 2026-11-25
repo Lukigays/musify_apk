@@ -36,6 +36,8 @@ import com.music.bitchord.ui.components.backdrop.highlight.Highlight
 import com.music.bitchord.ui.components.backdrop.highlight.HighlightElement
 import com.music.bitchord.ui.components.backdrop.internal.ShapeProvider
 import com.music.bitchord.ui.components.backdrop.shadow.Shadow
+import com.music.bitchord.ui.theme.MusifyCoral
+import com.music.bitchord.ui.theme.MusifyRose
 import androidx.compose.ui.unit.dp
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
@@ -123,9 +125,9 @@ fun glassContentColor(): Color =
 @Composable
 fun glassIndicatorColor(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color.White.copy(alpha = 0.5f)
+        MusifyRose.copy(alpha = 0.22f)
     } else {
-        Color.White.copy(alpha = DARK_INDICATOR_OPACITY)
+        MusifyCoral.copy(alpha = 0.22f)
     }
 
 /** The selected tab's pill in dark theme, a step whiter than the bar. */

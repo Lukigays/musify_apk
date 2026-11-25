@@ -33,7 +33,7 @@ import com.music.bitchord.ui.components.MiniPlayer
 import com.music.bitchord.ui.components.TopFadeBlur
 import com.music.bitchord.ui.components.TopBarBlur
 import com.music.bitchord.ui.icons.BitChordIcons
-import com.music.bitchord.ui.theme.BitChordTheme
+import com.music.bitchord.ui.theme.MusifyTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -180,20 +180,20 @@ private fun ChromeStack(scrolled: Boolean, withMiniPlayer: Boolean) {
 @Preview(name = "Chrome · dark", device = "id:pixel_8", showBackground = true)
 @Composable
 private fun ChromeDarkPreview() {
-    BitChordTheme(darkTheme = true) { ChromeStack(scrolled = true, withMiniPlayer = false) }
+    MusifyTheme(darkTheme = true) { ChromeStack(scrolled = true, withMiniPlayer = false) }
 }
 
 @Preview(name = "Chrome · light", device = "id:pixel_8", showBackground = true)
 @Composable
 private fun ChromeLightPreview() {
-    BitChordTheme(darkTheme = false) { ChromeStack(scrolled = true, withMiniPlayer = false) }
+    MusifyTheme(darkTheme = false) { ChromeStack(scrolled = true, withMiniPlayer = false) }
 }
 
 /** The taller scrim, which the mini player's arrival grows it into. */
 @Preview(name = "Chrome · mini player", device = "id:pixel_8", showBackground = true)
 @Composable
 private fun ChromeMiniPlayerPreview() {
-    BitChordTheme(darkTheme = true) { ChromeStack(scrolled = true, withMiniPlayer = true) }
+    MusifyTheme(darkTheme = true) { ChromeStack(scrolled = true, withMiniPlayer = true) }
 }
 
 /**
@@ -214,7 +214,7 @@ private fun ChromeMiniPlayerPreview() {
 )
 @Composable
 private fun MiniPlayerPreview() {
-    BitChordTheme {
+    MusifyTheme {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -266,7 +266,7 @@ private fun MiniPlayerPreview() {
 )
 @Composable
 private fun ScrimRampPreview() {
-    BitChordTheme {
+    MusifyTheme {
         Box(Modifier.fillMaxSize()) {
             // A mid grey under it: the ramp reads as a ramp against this,
             // whereas over the theme's own background it is invisible by
@@ -291,7 +291,7 @@ private fun ScrimRampPreview() {
 @Preview(name = "Top bar · backdrops", device = "id:pixel_8", showBackground = true)
 @Composable
 private fun TopBarBackdropPreview() {
-    BitChordTheme(darkTheme = true) {
+    MusifyTheme(darkTheme = true) {
         Column(
             Modifier
                 .fillMaxSize()

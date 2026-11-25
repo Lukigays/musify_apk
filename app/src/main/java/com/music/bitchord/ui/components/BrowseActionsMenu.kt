@@ -120,6 +120,8 @@ fun BrowseActionsMenu(
      * from something other than a real browse id (a Local Music grouping).
      */
     onShare: (() -> Unit)? = null,
+    /** Exports the collection's tracks to M3U / M3U8 / XSPF / CSV / TXT / JSON. */
+    onExportPlaylist: (() -> Unit)? = null,
     /**
      * Set whenever [target] is a playlist, regardless of who owns it — pinning
      * doesn't touch the account, only what sits at the top of this device's
@@ -253,6 +255,9 @@ fun BrowseActionsMenu(
             }
             onShare?.let {
                 ActionRow(SfIcons.Share, stringResource(R.string.share), onClick = it)
+            }
+            onExportPlaylist?.let {
+                ActionRow(SfIcons.FileUpload, stringResource(R.string.export_playlist_action), onClick = it)
             }
             onTogglePin?.let {
                 ActionRow(

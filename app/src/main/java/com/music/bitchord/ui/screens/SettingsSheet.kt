@@ -120,7 +120,13 @@ import androidx.compose.ui.input.pointer.positionChanged
 import kotlin.math.abs
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import com.music.bitchord.ui.theme.MusifyCoral
+import com.music.bitchord.ui.theme.MusifyCoralSoft
+import com.music.bitchord.ui.theme.MusifyRose
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -201,6 +207,7 @@ fun SettingsScreen(
     onOpenReplay: () -> Unit,
     /** Opens [DriveBackupScreen], under Backup and Restore. */
     onDriveBackup: () -> Unit,
+    onExportPlaylists: () -> Unit = {},
     onLyricsSources: () -> Unit,
     onTranslationLanguage: () -> Unit,
     onSources: () -> Unit,
@@ -460,6 +467,9 @@ fun SettingsScreen(
             .padding(contentPadding),
     ) {
         SettingsPageTitle(stringResource(section?.title ?: R.string.settings))
+        if (section == null && searchQuery.isBlank()) {
+            MusifySettingsHeaderCard(version = version)
+        }
         if (section == null) {
             SearchField(
                 query = searchQuery,
@@ -1663,6 +1673,15 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setReplayGenres(!replayGenres) },
+                )
+            }
+            val exportPlaylistsTitle = stringResource(R.string.export_playlist_data)
+            row(exportPlaylistsTitle, "playlist", "m3u", "m3u8", "xspf", "csv", "txt", "export") {
+                SettingsRow(
+                    icon = SfIcons.FileUpload,
+                    title = exportPlaylistsTitle,
+                    subtitle = stringResource(R.string.export_playlist_data_subtitle),
+                    onClick = onExportPlaylists,
                 )
             }
             val exportDataTitle = stringResource(R.string.export_data)
@@ -3068,6 +3087,78 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             MISCELLANEOUS -> SfIcons.Miscellaneous
             LANGUAGE -> SfIcons.Language
         }
+}
+
+@Composable
+private fun MusifySettingsHeaderCard(version: String) {
+    val cardShape = RoundedCornerShape(22.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 14.dp)
+            .clip(cardShape)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        MusifyCoral.copy(alpha = 0.22f),
+                        MusifyRose.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.surface,
+                    ),
+                ),
+            )
+            .border(1.dp, MusifyCoral.copy(alpha = 0.34f), cardShape)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(Brush.linearGradient(listOf(MusifyCoralSoft, MusifyCoral, MusifyRose))),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_logo),
+                contentDescription = "Musify",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Musify",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MusifyCoral.copy(alpha = 0.18f))
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = "v$version",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = MusifyCoral,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Hi-Res Audio • AutoMix • Liquid Glass",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 /** The settings whose options are a page of their own — see [SettingsChoicePage]. */

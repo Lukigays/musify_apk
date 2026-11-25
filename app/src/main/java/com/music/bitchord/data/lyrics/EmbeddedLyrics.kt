@@ -46,7 +46,7 @@ import java.io.InputStream
  */
 object EmbeddedLyrics {
 
-    private const val TAG = "BitChord"
+    private const val TAG = "Musify"
 
     /**
      * Most bytes worth pulling to find a tag.
@@ -170,8 +170,9 @@ object EmbeddedLyrics {
         // into `ilst`, so their value ends exactly on `moov`'s own end — an
         // inclusive bound here rejects the one atom this is looking for.
         val end = moov.last + 1
-        return ilstText(bytes, moov.first, end, freeform = true)
-            ?: ilstText(bytes, moov.first, end, freeform = false)
+        return ilstText(bytes, moov.first, end, WORD_LYRICS_FIELD.toByteArray(Charsets.UTF_8))
+            ?: ilstText(bytes, moov.first, end, LEGACY_WORD_LYRICS_FIELD.toByteArray(Charsets.UTF_8))
+            ?: ilstText(bytes, moov.first, end, LYR_ATOM)
     }
 
     /**
@@ -210,8 +211,7 @@ object EmbeddedLyrics {
      * four-byte type *is* the name. They are stored differently enough that one
      * search cannot find both.
      */
-    private fun ilstText(bytes: ByteArray, from: Int, endExclusive: Int, freeform: Boolean): String? {
-        val marker = if (freeform) WORD_LYRICS_FIELD.toByteArray(Charsets.UTF_8) else LYR_ATOM
+    private fun ilstText(bytes: ByteArray, from: Int, endExclusive: Int, marker: ByteArray): String? {
         var at = from
         while (true) {
             val found = bytes.indexOf(marker, at, endExclusive) ?: return null
@@ -289,7 +289,7 @@ object EmbeddedLyrics {
             val value = entry.substringAfter('=', "")
             // This app's own field wins outright; the standard one is held in
             // case it turns out to be the only one there.
-            if (name == WORD_LYRICS_FIELD && value.isNotBlank()) return value
+            if ((name == WORD_LYRICS_FIELD || name == LEGACY_WORD_LYRICS_FIELD) && value.isNotBlank()) return value
             if (name == "LYRICS" && plain == null && value.isNotBlank()) plain = value
         }
         return plain
@@ -309,7 +309,7 @@ object EmbeddedLyrics {
      */
     private fun matroska(bytes: ByteArray): String? {
         var plain: String? = null
-        for (name in listOf(WORD_LYRICS_FIELD, "LYRICS")) {
+        for (name in listOf(WORD_LYRICS_FIELD, LEGACY_WORD_LYRICS_FIELD, "LYRICS")) {
             val needle = name.toByteArray(Charsets.US_ASCII)
             var from = 0
             while (true) {
@@ -325,7 +325,7 @@ object EmbeddedLyrics {
                 if (size.value <= 0 || valueAt + size.value > bytes.size) continue
                 val value = String(bytes, valueAt, size.value.toInt(), Charsets.UTF_8)
                 if (value.isBlank()) continue
-                if (name == WORD_LYRICS_FIELD) return value
+                if (name == WORD_LYRICS_FIELD || name == LEGACY_WORD_LYRICS_FIELD) return value
                 if (plain == null) plain = value
             }
         }

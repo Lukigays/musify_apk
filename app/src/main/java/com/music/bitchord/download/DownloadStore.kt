@@ -53,7 +53,7 @@ import java.util.Locale
  */
 object DownloadStore {
 
-    private const val TAG = "BitChord"
+    private const val TAG = "Musify"
 
     /** The subfolder of Music that everything lands in. */
     const val FOLDER = "Musify"

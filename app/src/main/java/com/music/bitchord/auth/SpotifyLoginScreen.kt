@@ -1,6 +1,7 @@
 package com.music.bitchord.auth
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
@@ -9,19 +10,44 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.net.toUri
+import com.music.bitchord.R
 import com.music.bitchord.data.web.QuietWebChromeClient
+import com.music.bitchord.ui.theme.MusifyCoral
+import kotlinx.coroutines.delay
 
+/**
+ * Land on Spotify's lightweight account status page after login rather than the
+ * heavy open.spotify.com web player homepage, so the user isn't taken to the
+ * web homepage before Musify completes login.
+ */
 private const val LOGIN_URL =
-    "https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F"
+    "https://accounts.spotify.com/login?continue=https%3A%2F%2Faccounts.spotify.com%2Fen%2Fstatus"
 
 private val SPOTIFY_COOKIE_URLS = listOf(
     "https://open.spotify.com",
@@ -41,6 +67,32 @@ private fun hostMatches(uri: Uri?, suffixes: List<String>): Boolean {
 }
 
 private fun isLoginHost(uri: Uri?) = hostMatches(uri, LOGIN_HOST_SUFFIXES)
+
+private fun isSpotifyPostLoginUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+    val host = uri.host?.lowercase() ?: return false
+    val path = uri.path.orEmpty().lowercase()
+    return when {
+        host == "open.spotify.com" -> true
+        host == "accounts.spotify.com" && (path == "/status" || path.endsWith("/status")) -> true
+        else -> false
+    }
+}
+
+private fun readSpdcCookie(): String? {
+    val manager = CookieManager.getInstance()
+    for (url in SPOTIFY_COOKIE_URLS) {
+        val raw = manager.getCookie(url) ?: continue
+        val token = raw.split(";")
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("sp_dc=") }
+            ?.substringAfter("=")
+            ?.takeIf { it.isNotBlank() }
+        if (token != null) return token
+    }
+    return null
+}
 
 /**
  * Signs the login WebView out of Spotify. Disconnecting only forgot the
@@ -65,15 +117,9 @@ fun clearSpotifyWebSession() {
 }
 
 /**
- * In-app Spotify sign-in. Lets the real accounts.spotify.com page handle the
- * login, then hands the `sp_dc` cookie to [onConnected] once the page lands on
- * open.spotify.com.
- *
- * Must be hosted as a root overlay, like [DiscordLoginScreen], never inside the
- * page content: that subtree is the `hazeSource` and the glass backdrop, both of
- * which record it into a layer and draw it a second time. A WebView drawn twice
- * flickers, drops parts of the page, and on some devices takes the app down in
- * Chromium's draw functor.
+ * In-app Spotify sign-in. Lets accounts.spotify.com handle authentication,
+ * then captures `sp_dc` immediately upon landing on `/status` (or `open.spotify.com`)
+ * without ever rendering the Spotify web homepage.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -83,63 +129,119 @@ fun SpotifyLoginScreen(
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
+    var finishingLogin by remember { mutableStateOf(false) }
+    var delivered by remember { mutableStateOf(false) }
+    val currentOnConnected by rememberUpdatedState(onConnected)
 
-    AndroidView(
-        modifier = modifier.fillMaxSize(),
-        factory = { context ->
-            WebView(context).apply {
-                // MATCH_PARENT, not the WRAP_CONTENT Compose hands a bare view:
-                // see DiscordLoginScreen — a zero layout viewport collapses
-                // any page sized off `height: 100%`, and Spotify's is.
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                )
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                // The device's own mobile Chrome, minus the WebView markers. A
-                // desktop user agent served the desktop layout scaled into a
-                // phone, where part of the page fell off screen.
-                settings.userAgentString = browserUserAgent(settings.userAgentString)
-                setBackgroundColor(0xFF121212.toInt())
-                CookieManager.getInstance().setAcceptCookie(true)
-                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-
-                webChromeClient = QuietWebChromeClient()
-                var sent = false
-                webViewClient = object : WebViewClient() {
-                    // Spotify's own pages and the identity providers its sign-in
-                    // hands off to; anything else is not part of logging in.
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView,
-                        request: WebResourceRequest,
-                    ): Boolean = !isLoginHost(request.url)
-
-                    override fun onPageFinished(view: WebView, url: String?) {
-                        canGoBack = view.canGoBack()
-                        if (sent || url?.startsWith("https://open.spotify.com") != true) return
-                        val raw = CookieManager.getInstance().getCookie("https://open.spotify.com") ?: return
-                        val token = raw.split(";")
-                            .map { it.trim() }
-                            .firstOrNull { it.startsWith("sp_dc=") }
-                            ?.substringAfter("=")
-                            ?.takeIf { it.isNotBlank() }
-                            ?: return
-                        sent = true
-                        // Hide before handing over, so the web player this
-                        // landed on doesn't flash up as the overlay tears down.
-                        view.visibility = View.GONE
-                        onConnected(token)
-                    }
-                }
-                webView = this
-                loadUrl(LOGIN_URL)
+    // Brief cookie-flush fallback if redirect hit /status a split second before CookieManager persisted sp_dc.
+    LaunchedEffect(finishingLogin) {
+        if (!finishingLogin || delivered) return@LaunchedEffect
+        repeat(15) {
+            val token = readSpdcCookie()
+            if (token != null) {
+                delivered = true
+                CookieManager.getInstance().flush()
+                webView?.stopLoading()
+                webView?.visibility = View.GONE
+                currentOnConnected(token)
+                return@LaunchedEffect
             }
-        },
-        onRelease = { it.destroy() },
-    )
+            delay(200)
+        }
+        finishingLogin = false
+    }
 
-    BackHandler(enabled = canGoBack) {
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                WebView(context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.userAgentString = browserUserAgent(settings.userAgentString)
+                    setBackgroundColor(0xFF121212.toInt())
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                    webChromeClient = QuietWebChromeClient()
+
+                    fun tryComplete(view: WebView, url: String?): Boolean {
+                        if (delivered || !isSpotifyPostLoginUrl(url)) return false
+                        finishingLogin = true
+                        val token = readSpdcCookie() ?: return false
+                        delivered = true
+                        CookieManager.getInstance().flush()
+                        view.stopLoading()
+                        view.visibility = View.GONE
+                        currentOnConnected(token)
+                        return true
+                    }
+
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): Boolean {
+                            val target = request.url
+                            if (!isLoginHost(target)) return true
+                            if (tryComplete(view, target.toString())) return true
+                            return false
+                        }
+
+                        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                            canGoBack = view.canGoBack()
+                            tryComplete(view, url)
+                        }
+
+                        override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                            canGoBack = view.canGoBack()
+                            tryComplete(view, url)
+                        }
+
+                        override fun onPageFinished(view: WebView, url: String?) {
+                            canGoBack = view.canGoBack()
+                            tryComplete(view, url)
+                        }
+                    }
+                    webView = this
+                    loadUrl(LOGIN_URL)
+                }
+            },
+            onRelease = { it.destroy() },
+        )
+
+        AnimatedVisibility(
+            visible = finishingLogin,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(color = MusifyCoral, modifier = Modifier.size(36.dp))
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = stringResource(R.string.auto_signing_in),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = canGoBack && !finishingLogin) {
         webView?.goBack()
     }
 }

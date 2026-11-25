@@ -1389,4 +1389,17 @@
     <string name="replay_year_summary_minutes">Minutes listened</string>
     <string name="replay_year_mute">Mute the story</string>
     <string name="replay_year_unmute">Unmute the story</string>
+    <string name="export_playlist_title">匯出播放清單與資料</string>
+    <string name="export_playlist_subtitle">以標準格式儲存、分享或複製曲目清單</string>
+    <string name="export_choose_source">選擇來源</string>
+    <string name="export_choose_format">匯出格式</string>
+    <string name="export_empty_source">此選擇沒有可匯出的歌曲</string>
+    <string name="export_save_file">儲存檔案</string>
+    <string name="export_copy_text">複製到剪貼簿</string>
+    <string name="export_copied_clipboard">已複製 %1$s 匯出內容</string>
+    <string name="export_playlist_saved">已儲存 %1$d 首歌曲（%2$s）</string>
+    <string name="export_playlist_action">匯出播放清單 (M3U / CSV 等)</string>
+    <string name="export_playlist_data">匯出播放清單與歌曲</string>
+    <string name="export_playlist_data_subtitle">M3U、M3U8、XSPF、CSV、TXT 或 JSON</string>
+    <string name="auto_signing_in">正在完成登入…</string>
 </resources>

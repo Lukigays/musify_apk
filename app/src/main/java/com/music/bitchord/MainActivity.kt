@@ -80,6 +80,7 @@ import androidx.compose.material.icons.rounded.Upgrade
 import com.music.bitchord.data.listentogether.ServerConnectionState
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -250,6 +251,8 @@ import com.music.bitchord.download.DownloadTarget
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsMenu
 import com.music.bitchord.ui.components.BrowseTarget
+import com.music.bitchord.ui.components.ExportDataSource
+import com.music.bitchord.ui.components.PlaylistExportSheet
 import com.music.bitchord.ui.components.ConfirmationAlert
 import com.music.bitchord.ui.components.InfoAlert
 import com.music.bitchord.ui.components.DownloadManagerPage
@@ -380,7 +383,8 @@ import com.music.bitchord.ui.replay.ReplayShareSheet
 import com.music.bitchord.ui.replay.ReplayStories
 import com.music.bitchord.ui.replay.ReplayStoryPage
 import com.music.bitchord.ui.replay.rememberReplayState
-import com.music.bitchord.ui.theme.BitChordTheme
+import com.music.bitchord.ui.theme.MusifyCoral
+import com.music.bitchord.ui.theme.MusifyTheme
 import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.data.canvas.AppleArtistArtRepository
 import com.music.bitchord.data.canvas.keyColors
@@ -454,9 +458,9 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            BitChordTheme(darkTheme = darkTheme, font = appFont) {
+            MusifyTheme(darkTheme = darkTheme, font = appFont) {
                 // The glass surfaces sample this layer, and a layer records only
-                // what is drawn into it — which, for BitChord, is a page that
+                // what is drawn into it — which, for Musify, is a page that
                 // paints no background of its own. Everywhere a page is not
                 // showing artwork the recording is transparent, so the glass had
                 // nothing to blur there and you saw straight through it to the
@@ -785,6 +789,7 @@ private fun BitChordApp(
     var playlistTarget by remember { mutableStateOf<Song?>(null) }
     // The album whose complete track list is being added to selected playlists.
     var albumPlaylistTarget by remember { mutableStateOf<BrowseTarget?>(null) }
+    var exportSources by remember { mutableStateOf<List<ExportDataSource>?>(null) }
     var queuePlaylistSongs by remember { mutableStateOf<List<Song>?>(null) }
     var queuePlaylistCompletion by remember { mutableStateOf<CompletableDeferred<Boolean>?>(null) }
     // The picker opened from the Library tab, where there is no track and
@@ -3206,7 +3211,6 @@ private fun BitChordApp(
                                 account = account,
                                 channelName = selectedChannelName,
                                 onSignIn = {
-                                    navigator.clear()
                                     webSession = WebSessionMode.SIGN_IN
                                 },
                                 onSwitchChannel = {
@@ -3260,7 +3264,6 @@ private fun BitChordApp(
                                     activeJamInviteServer = null
                                 },
                                 onSignIn = {
-                                    navigator.clear()
                                     webSession = WebSessionMode.SIGN_IN
                                 },
                                 contentPadding = listPadding,
@@ -3294,7 +3297,6 @@ private fun BitChordApp(
                                 signedIn = signedIn,
                                 account = account,
                                 onSignIn = {
-                                    navigator.clear()
                                     webSession = WebSessionMode.SIGN_IN
                                 },
                                 onSignOut = { viewModel.signOut() },
@@ -3305,6 +3307,95 @@ private fun BitChordApp(
                                     navigator.push(AppRoute.Replay)
                                 },
                                 onDriveBackup = { navigator.push(AppRoute.DriveBackup) },
+                                onExportPlaylists = {
+                                    val list = buildList {
+                                        if (player.queue.isNotEmpty()) {
+                                            add(
+                                                ExportDataSource(
+                                                    id = "queue:now",
+                                                    title = context.getString(R.string.queue),
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, player.queue.size),
+                                                    songs = player.queue,
+                                                ),
+                                            )
+                                        }
+                                        val ytPlaylists = (libraryState as? UiState.Success)?.data?.playlists.orEmpty()
+                                        ytPlaylists.forEach { p ->
+                                            add(
+                                                ExportDataSource(
+                                                    id = p.browseId,
+                                                    title = p.title,
+                                                    subtitle = p.subtitle,
+                                                    loadSongs = {
+                                                        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                                                            viewModel.collectSongs(p.browseId, p.thumbnailUrl) { res ->
+                                                                if (cont.isActive) cont.resumeWith(Result.success(res))
+                                                            }
+                                                        }
+                                                    },
+                                                ),
+                                            )
+                                        }
+                                        offlinePlaylists.forEach { p ->
+                                            add(
+                                                ExportDataSource(
+                                                    id = p.browseId,
+                                                    title = p.title,
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, p.songs.size),
+                                                    songs = p.songs,
+                                                ),
+                                            )
+                                        }
+                                        localPlaylists.forEach { p ->
+                                            add(
+                                                ExportDataSource(
+                                                    id = p.browseId,
+                                                    title = p.title,
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, p.songs.size),
+                                                    songs = p.songs,
+                                                ),
+                                            )
+                                        }
+                                        add(
+                                            ExportDataSource(
+                                                id = "local:downloads",
+                                                title = context.getString(R.string.downloads),
+                                                loadSongs = {
+                                                    kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                                                        viewModel.collectSongs("local:downloads", null) { res ->
+                                                            if (cont.isActive) cont.resumeWith(Result.success(res))
+                                                        }
+                                                    }
+                                                },
+                                            ),
+                                        )
+                                        add(
+                                            ExportDataSource(
+                                                id = "local:all",
+                                                title = context.getString(R.string.local_music),
+                                                loadSongs = {
+                                                    kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                                                        viewModel.collectSongs("local:all", null) { res ->
+                                                            if (cont.isActive) cont.resumeWith(Result.success(res))
+                                                        }
+                                                    }
+                                                },
+                                            ),
+                                        )
+                                        val histSongs = (historyState as? UiState.Success)?.data?.map { it.song }.orEmpty()
+                                        if (histSongs.isNotEmpty()) {
+                                            add(
+                                                ExportDataSource(
+                                                    id = "history:all",
+                                                    title = context.getString(R.string.history),
+                                                    subtitle = context.getString(R.string.local_playlist_subtitle, histSongs.size),
+                                                    songs = histSongs,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                    exportSources = list
+                                },
                                 onLyricsSources = { showLyricsSources = true },
                                 onTranslationLanguage = { showTranslationLanguage = true },
                                 onSources = { navigator.push(AppRoute.Sources) },
@@ -5535,6 +5626,29 @@ private fun BitChordApp(
                             browseActions = null
                         }
                     },
+                onExportPlaylist = if (target.songs.isNotEmpty() || target.browseId != null) {
+                    {
+                        browseActions = null
+                        withBrowseSongs(target) { songs ->
+                            if (songs.isNotEmpty()) {
+                                exportSources = listOf(
+                                    ExportDataSource(
+                                        id = target.browseId ?: target.title,
+                                        title = target.title,
+                                        subtitle = target.subtitle,
+                                        songs = songs,
+                                    ),
+                                )
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.no_tracks_here),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }
+                    }
+                } else null,
                 isPinned = pinnableId != null && pinnableId in pinnedPlaylists,
                 onTogglePin = pinnableId?.let { id ->
                     {
@@ -5710,6 +5824,7 @@ private fun BitChordApp(
             var captureFailed by remember(mode) { mutableStateOf(false) }
             var pageReady by remember(mode) { mutableStateOf(false) }
             var confirmingProfile by remember(mode) { mutableStateOf(false) }
+            var autoCompleting by remember(mode) { mutableStateOf(false) }
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize()) {
                     Row(
@@ -5735,12 +5850,12 @@ private fun BitChordApp(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
-                            if (pageReady) {
+                            if (pageReady && !autoCompleting) {
                                 Text(
                                     text = if (captureFailed) {
-                                         stringResource(R.string.profile_unavailable)
-                                     } else {
-                                         stringResource(R.string.switch_profile_hint)
+                                        stringResource(R.string.profile_unavailable)
+                                    } else {
+                                        stringResource(R.string.switch_profile_hint)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -5748,7 +5863,7 @@ private fun BitChordApp(
                                 )
                             }
                         }
-                        if (pageReady) {
+                        if (pageReady && !autoCompleting) {
                             TextButton(onClick = {
                                 captureFailed = false
                                 confirmingProfile = true
@@ -5761,32 +5876,54 @@ private fun BitChordApp(
                             }
                         }
                     }
-                    YtMusicLoginScreen(
-                        mode = mode,
-                        initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                            googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
-                        } else null,
-                        captureRequest = captureRequest,
-                        onPageReady = { pageReady = it },
-                        onCaptureUnavailable = {
-                            confirmingProfile = false
-                            captureFailed = true
-                        },
-                        onCaptured = { session ->
-                            viewModel.onWebSession(session, mode) { accepted ->
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        YtMusicLoginScreen(
+                            mode = mode,
+                            initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
+                                googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
+                            } else null,
+                            captureRequest = captureRequest,
+                            onPageReady = { pageReady = it },
+                            onAutoCompleting = { autoCompleting = it },
+                            onCaptureUnavailable = {
                                 confirmingProfile = false
-                                if (accepted) {
-                                    webSession = null
-                                    if (mode == WebSessionMode.SIGN_IN) {
-                                        navigator.clear()
-                                        selectedTab = TAB_LIBRARY
+                                autoCompleting = false
+                                captureFailed = true
+                            },
+                            onCaptured = { session ->
+                                viewModel.onWebSession(session, mode) { accepted ->
+                                    confirmingProfile = false
+                                    if (accepted) {
+                                        webSession = null
+                                    } else {
+                                        autoCompleting = false
+                                        captureFailed = true
                                     }
-                                } else {
-                                    captureFailed = true
+                                }
+                            },
+                        )
+                        if (autoCompleting) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(
+                                        color = MusifyCoral,
+                                        modifier = Modifier.size(36.dp),
+                                    )
+                                    Spacer(Modifier.height(14.dp))
+                                    Text(
+                                        text = stringResource(R.string.auto_signing_in),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    )
                                 }
                             }
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -6245,6 +6382,13 @@ private fun BitChordApp(
                     choosingSourceQuality = null
                 },
                 onDismiss = { choosingSourceQuality = null },
+            )
+        }
+
+        exportSources?.let { sources ->
+            PlaylistExportSheet(
+                sources = sources,
+                onDismiss = { exportSources = null },
             )
         }
 

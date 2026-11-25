@@ -1523,4 +1523,17 @@
     <string name="poster_studio_save">Save PNG</string>
     <string name="poster_studio_share">Share Poster</string>
     <string name="poster_studio_saved">Poster saved to gallery</string>
+    <string name="export_playlist_title">Export playlist &amp; data</string>
+    <string name="export_playlist_subtitle">Save, share, or copy tracks in standard formats</string>
+    <string name="export_choose_source">Select source</string>
+    <string name="export_choose_format">Export format</string>
+    <string name="export_empty_source">No tracks to export in this selection</string>
+    <string name="export_save_file">Save file</string>
+    <string name="export_copy_text">Copy to clipboard</string>
+    <string name="export_copied_clipboard">Copied %1$s export to clipboard</string>
+    <string name="export_playlist_saved">Saved %1$d tracks (%2$s)</string>
+    <string name="export_playlist_action">Export playlist (M3U / CSV / etc.)</string>
+    <string name="export_playlist_data">Export playlists &amp; tracks</string>
+    <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, or JSON</string>
+    <string name="auto_signing_in">Completing sign-in…</string>
 </resources>

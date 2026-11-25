@@ -37,7 +37,7 @@ import com.music.bitchord.wear.WearProtocol as P
  */
 object SelfUpdate {
 
-    private const val TAG = "BitChordWear"
+    private const val TAG = "MusifyWear"
     private const val CHANNEL = "updates"
     private const val NOTIFICATION_ID = 2
 
@@ -75,7 +75,7 @@ object SelfUpdate {
         return hash
     }
 
-    private fun incoming(context: Context) = File(context.cacheDir, "update/BitChord.apk")
+    private fun incoming(context: Context) = File(context.cacheDir, "update/Musify.apk")
 
     /**
      * A newer APK arriving on [P.PATH_APK].
@@ -191,7 +191,7 @@ class InstallResultReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> SelfUpdate.done(context)
             else -> Log.w(
-                "BitChordWear",
+                "MusifyWear",
                 "update failed: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}",
             )
         }
