@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
@@ -90,8 +91,8 @@ class MiniMqttClient(
             val normalizedPath = if (path.startsWith("/")) path else "/$path"
             val stream = ChunkedInputStream()
             val openLatch = CountDownLatch(1)
-            @Volatile var openFailure: Throwable? = null
-            @Volatile var opened = false
+            val openFailure = AtomicReference<Throwable?>(null)
+            val opened = AtomicBoolean(false)
 
             val req = Request.Builder()
                 .url("https://$host:$port$normalizedPath")
@@ -103,7 +104,7 @@ class MiniMqttClient(
                 req,
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
-                        opened = true
+                        opened.set(true)
                         lastRxMs.set(System.currentTimeMillis())
                         openLatch.countDown()
                     }
@@ -125,7 +126,7 @@ class MiniMqttClient(
                     }
 
                     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                        openFailure = t
+                        openFailure.set(t)
                         stream.finish()
                         openLatch.countDown()
                         drop()
@@ -134,10 +135,10 @@ class MiniMqttClient(
             )
 
             val awaited = openLatch.await(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
-            if (!awaited || !opened) {
+            if (!awaited || !opened.get()) {
                 runCatching { ws.cancel() }
                 stream.finish()
-                val err = openFailure
+                val err = openFailure.get()
                 throw IOException("WSS handshake failed for $host:$port$normalizedPath", err)
             }
             webSocket = ws
@@ -544,7 +545,7 @@ class MiniMqttClient(
             val normalizedPath = if (path.startsWith("/")) path else "/$path"
             val t0 = System.nanoTime()
             val latch = CountDownLatch(1)
-            @Volatile var ok = false
+            val ok = AtomicBoolean(false)
             val req = Request.Builder()
                 .url("https://${endpoint.host}:${endpoint.port}$normalizedPath")
                 .header("Sec-WebSocket-Protocol", "mqtt")
@@ -553,7 +554,7 @@ class MiniMqttClient(
                 req,
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
-                        ok = true
+                        ok.set(true)
                         webSocket.close(1000, null)
                         latch.countDown()
                     }
@@ -564,7 +565,7 @@ class MiniMqttClient(
                 },
             )
             latch.await(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
-            if (!ok) {
+            if (!ok.get()) {
                 runCatching { ws.cancel() }
                 return null
             }
