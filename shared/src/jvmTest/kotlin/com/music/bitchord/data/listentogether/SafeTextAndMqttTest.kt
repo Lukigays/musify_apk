@@ -48,4 +48,23 @@ class SafeTextAndMqttTest {
         )
         assertEquals(0x31, pub[0].toInt() and 0xFF)
     }
+
+    @Test
+    fun `default encrypted endpoint catalog pairs TLS and WSS fallbacks without self-signed mosquitto 8883`() {
+        val endpoints = MiniMqttClient.DEFAULT_ENDPOINTS
+        assertTrue(endpoints.size >= 6)
+        assertEquals("broker.emqx.io", endpoints[0].host)
+        assertEquals(8883, endpoints[0].port)
+        assertEquals(null, endpoints[0].wsPath)
+
+        assertEquals("broker.emqx.io", endpoints[1].host)
+        assertEquals(8084, endpoints[1].port)
+        assertEquals("/mqtt", endpoints[1].wsPath)
+
+        val mosquittoEndpoints = endpoints.filter { it.host == "test.mosquitto.org" }
+        assertTrue(mosquittoEndpoints.any { it.port == 8886 && it.wsPath == null })
+        assertTrue(mosquittoEndpoints.any { it.port == 8081 && it.wsPath == "/mqtt" })
+        assertFalse(mosquittoEndpoints.any { it.port == 8883 })
+        assertEquals("wss://broker.emqx.io:8084/mqtt", endpoints[1].label)
+    }
 }

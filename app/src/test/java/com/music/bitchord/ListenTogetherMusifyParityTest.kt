@@ -1,6 +1,7 @@
 package com.music.bitchord
 
 import com.music.bitchord.data.listentogether.ListenTogether
+import com.music.bitchord.data.listentogether.MiniMqttClient
 import com.music.bitchord.data.listentogether.MqttPartyCommand
 import com.music.bitchord.data.listentogether.MqttPartyStateSnapshot
 import com.music.bitchord.data.listentogether.PartyChatMessage
@@ -96,5 +97,13 @@ class ListenTogetherMusifyParityTest {
         )
         assertEquals("vote_propose", decoded.action)
         assertEquals("abc123", decoded.track?.videoId)
+    }
+
+    @Test
+    fun `mqtt relay list includes primary EMQX TLS plus WSS fallback`() {
+        val relays = MiniMqttClient.DEFAULT_RELAYS
+        assertTrue(relays.contains("broker.emqx.io" to 8883))
+        assertTrue(relays.contains("test.mosquitto.org" to 8886))
+        assertTrue(MiniMqttClient.DEFAULT_ENDPOINTS.any { it.host == "broker.emqx.io" && it.wsPath == "/mqtt" })
     }
 }

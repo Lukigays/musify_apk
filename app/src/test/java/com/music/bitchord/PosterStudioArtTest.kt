@@ -1,14 +1,20 @@
 package com.music.bitchord
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import com.music.bitchord.ui.poster.DepthStroke
+import com.music.bitchord.ui.poster.POSTER_LINE_PALETTE
 import com.music.bitchord.ui.poster.POSTER_TINT_PALETTE
+import com.music.bitchord.ui.poster.Poster3dPreset
 import com.music.bitchord.ui.poster.PosterAspectRatio
 import com.music.bitchord.ui.poster.PosterBackgroundMode
 import com.music.bitchord.ui.poster.PosterCardStyle
 import com.music.bitchord.ui.poster.PosterColorFilter
 import com.music.bitchord.ui.poster.PosterFontStyle
 import com.music.bitchord.ui.poster.PosterStickerKind
+import com.music.bitchord.ui.poster.composeColorToHex
+import com.music.bitchord.ui.poster.composeColorToHsv
+import com.music.bitchord.ui.poster.hsvToComposeColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -58,5 +64,20 @@ class PosterStudioArtTest {
         )
         assertEquals(2, stroke.points.size)
         assertEquals(0.06f, stroke.radiusNorm, 0.0001f)
+    }
+
+    @Test
+    fun `poster 3d presets and free HSV color helpers work cleanly`() {
+        assertEquals(5, Poster3dPreset.entries.size)
+        assertEquals(0f, Poster3dPreset.FLAT.depth3d, 0.0001f)
+        assertTrue(Poster3dPreset.TILT_LEFT.depth3d >= 0.8f)
+        assertTrue(Poster3dPreset.DRAMATIC.depth3d == 1.0f)
+        assertTrue(POSTER_LINE_PALETTE.size >= 8)
+
+        val cyan = Color(0xFF38BDF8)
+        val hsv = composeColorToHsv(cyan)
+        val rebuilt = hsvToComposeColor(hsv[0], hsv[1], hsv[2])
+        assertEquals(composeColorToHex(cyan), composeColorToHex(rebuilt))
+        assertEquals("#FFFFFF", composeColorToHex(Color.White))
     }
 }

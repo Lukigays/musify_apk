@@ -446,10 +446,10 @@ object ListenTogether {
 
     suspend fun probeHealthWithLatency(serverUrl: String, timeoutMs: Long): ProbeResult =
         withContext(Dispatchers.IO) {
-            val relays = relayCandidatesFor(serverUrl)
+            val endpoints = relayEndpointCandidatesFor(serverUrl)
             val timeout = timeoutMs.toInt().coerceIn(1_500, 10_000)
-            for ((host, port) in relays) {
-                val rtt = MiniMqttClient.probeBrokerTcp(host, port, timeout)
+            for (endpoint in endpoints) {
+                val rtt = MiniMqttClient.probeEndpoint(endpoint, timeout)
                 if (rtt != null) {
                     return@withContext ProbeResult(isOnline = true, latencyMs = rtt)
                 }
@@ -625,7 +625,14 @@ object ListenTogether {
 
                 withContext(NonCancellable) {
                     closeSessionLocked()
-                    activePartyServerBase = resolveHttpBase(primary)
+                    activePartyServerBase = if (
+                        connectedClient.host == "broker.emqx.io" &&
+                        normalizeServerBase(primary) == defaultServer
+                    ) {
+                        defaultServer
+                    } else {
+                        "https://${connectedClient.host}:${connectedClient.port}"
+                    }
                     synchronized(stateMutex) {
                         currentSnapshot = initialSnap
                         presenceMembers.clear()
@@ -660,10 +667,15 @@ object ListenTogether {
                 }
                 startMqttLoop(code, me)
                 code
-            }.onFailure { failure ->
-                Log.w(TAG, "createParty failed: ${redact(failure.message)}")
-                _state.update { it.copy(error = failure.displayMessage()) }
-            }
+            }.fold(
+                onSuccess = { Result.success(it) },
+                onFailure = { failure ->
+                    val uiMessage = failure.displayMessage()
+                    Log.w(TAG, "createParty failed: ${redact(failure.message)}")
+                    _state.update { it.copy(error = uiMessage) }
+                    Result.failure(failure as? PartyException ?: PartyException("unreachable", uiMessage))
+                },
+            )
         }
     }
 
@@ -671,10 +683,15 @@ object ListenTogether {
         val targetServer = effectiveIdleServerBase()
         runCatching {
             doJoinOnBroker(targetServer, code, nickname)
-        }.onFailure { failure ->
-            Log.w(TAG, "could not enter a party: ${redact(failure.message)}")
-            _state.update { it.copy(error = failure.displayMessage()) }
-        }
+        }.fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { failure ->
+                val uiMessage = failure.displayMessage()
+                Log.w(TAG, "could not enter a party: ${redact(failure.message)}")
+                _state.update { it.copy(error = uiMessage) }
+                Result.failure(failure as? PartyException ?: PartyException("unreachable", uiMessage))
+            },
+        )
     }
 
     private suspend fun doJoinOnBroker(serverBase: String, code: String, nickname: String): String =
@@ -688,8 +705,8 @@ object ListenTogether {
             val previewSnap = fetchRoomSnapshot(cleaned, serverBase)
                 ?: throw PartyException("party_not_found", "Tidak ada ruang dengan kode $cleaned.")
 
-            val snapshot = previewSnap.first
-            val existingMembers = previewSnap.second
+            val snapshot = previewSnap.snapshot
+            val existingMembers = previewSnap.members
             val who = identity(nickname)
             if (who.memberId in snapshot.kickedMemberIds) {
                 recordKick(cleaned)
@@ -715,7 +732,7 @@ object ListenTogether {
             )
 
             val client = connectFirstHealthyRelay(
-                serverUrl = serverBase,
+                serverUrl = previewSnap.clusterUrl,
                 clientId = mqttClientId(cleaned, who.memberId),
                 willTopic = presenceTopic(cleaned, who.memberId),
                 willPayload = json.encodeToString(PartyMember.serializer(), me.copy(connected = false)),
@@ -723,7 +740,7 @@ object ListenTogether {
 
             withContext(NonCancellable) {
                 closeSessionLocked()
-                activePartyServerBase = resolveHttpBase(serverBase)
+                activePartyServerBase = resolveHttpBase(previewSnap.clusterUrl)
                 synchronized(stateMutex) {
                     currentSnapshot = if (isHost) snapshot.copy(hostMemberId = who.memberId) else snapshot
                     presenceMembers.clear()
@@ -1617,6 +1634,12 @@ object ListenTogether {
 
     // --------------------------------------------------------- preview ---
 
+    private data class RoomLookupResult(
+        val snapshot: MqttPartyStateSnapshot,
+        val members: List<PartyMember>,
+        val clusterUrl: String,
+    )
+
     suspend fun previewParty(code: String, server: String? = null): Result<PartyPreview> = withContext(Dispatchers.IO) {
         val cleaned = code.filter { it.isLetterOrDigit() }.uppercase()
         if (cleaned.length != CODE_LENGTH) {
@@ -1626,8 +1649,8 @@ object ListenTogether {
             refuseIfRecentlyKicked(cleaned)
             val result = fetchRoomSnapshot(cleaned, server ?: effectiveIdleServerBase())
                 ?: throw PartyException("party_not_found", "Tidak ada ruang dengan kode $cleaned.")
-            val snap = result.first
-            val members = result.second.filter { it.connected }
+            val snap = result.snapshot
+            val members = result.members.filter { it.connected }
             val host = members.firstOrNull { it.memberId == snap.hostMemberId } ?: members.firstOrNull()
             PartyPreview(
                 code = cleaned,
@@ -1643,55 +1666,92 @@ object ListenTogether {
                     )
                 },
             )
-        }.onFailure {
-            Log.w(TAG, "could not look up a party: ${redact(it.message)}")
-        }
+        }.fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { failure ->
+                val uiMessage = failure.displayMessage()
+                Log.w(TAG, "could not look up a party: ${redact(failure.message)}")
+                Result.failure(failure as? PartyException ?: PartyException("unreachable", uiMessage))
+            },
+        )
     }
 
-    private fun fetchRoomSnapshot(code: String, serverBase: String): Pair<MqttPartyStateSnapshot, List<PartyMember>>? {
-        val client = connectFirstHealthyRelay(
-            serverUrl = serverBase,
-            clientId = "musify-prev-${UUID.randomUUID().toString().take(8)}",
-        )
-        var foundSnap: MqttPartyStateSnapshot? = null
-        val members = LinkedHashMap<String, PartyMember>()
-        val lock = Object()
-        client.onMessage = { topic, payload, _ ->
-            val base = topicPrefix(code)
-            if (topic == "$base/state" && payload.isNotBlank()) {
-                runCatching { json.decodeFromString(MqttPartyStateSnapshot.serializer(), payload) }
-                    .getOrNull()?.let { s ->
-                        synchronized(lock) {
-                            foundSnap = s
-                            lock.notifyAll()
-                        }
-                    }
-            } else if (topic.startsWith("$base/presence/") && payload.isNotBlank()) {
-                runCatching { json.decodeFromString(PartyMember.serializer(), payload) }
-                    .getOrNull()?.let { m ->
-                        synchronized(lock) {
-                            members[m.memberId] = m
-                        }
-                    }
-            }
+    private fun fetchRoomSnapshot(code: String, serverBase: String): RoomLookupResult? {
+        val groupedByHost = LinkedHashMap<String, MutableList<MiniMqttClient.RelayEndpoint>>()
+        for (ep in relayEndpointCandidatesFor(serverBase)) {
+            groupedByHost.getOrPut(ep.host) { ArrayList() }.add(ep)
         }
-        return try {
-            client.subscribe(roomWildcard(code))
-            val deadline = System.currentTimeMillis() + 2_200L
-            synchronized(lock) {
-                while (foundSnap == null) {
-                    val rem = deadline - System.currentTimeMillis()
-                    if (rem <= 0L) break
-                    lock.wait(rem.coerceAtMost(200L))
+        val allowCrossClusterSearch = normalizeServerBase(serverBase).let { it.isBlank() || it == defaultServer }
+        var anyClusterConnected = false
+        var lastError: Throwable? = null
+
+        for ((index, entry) in groupedByHost.entries.withIndex()) {
+            val hostEndpoints = entry.value
+            val client = runCatching {
+                connectFirstHealthyEndpoint(
+                    endpoints = hostEndpoints,
+                    clientId = "musify-prev-${UUID.randomUUID().toString().take(8)}",
+                )
+            }.getOrElse { err ->
+                lastError = err
+                continue
+            }
+            anyClusterConnected = true
+
+            var foundSnap: MqttPartyStateSnapshot? = null
+            val members = LinkedHashMap<String, PartyMember>()
+            val lock = Object()
+            client.onMessage = { topic, payload, _ ->
+                val base = topicPrefix(code)
+                if (topic == "$base/state" && payload.isNotBlank()) {
+                    runCatching { json.decodeFromString(MqttPartyStateSnapshot.serializer(), payload) }
+                        .getOrNull()?.let { s ->
+                            synchronized(lock) {
+                                foundSnap = s
+                                lock.notifyAll()
+                            }
+                        }
+                } else if (topic.startsWith("$base/presence/") && payload.isNotBlank()) {
+                    runCatching { json.decodeFromString(PartyMember.serializer(), payload) }
+                        .getOrNull()?.let { m ->
+                            synchronized(lock) {
+                                members[m.memberId] = m
+                            }
+                        }
                 }
             }
-            if (foundSnap != null) {
-                Thread.sleep(180L) // give retained presence frames a moment to arrive
+            try {
+                client.subscribe(roomWildcard(code))
+                val waitWindow = if (index == 0) 2_200L else 1_400L
+                val deadline = System.currentTimeMillis() + waitWindow
+                synchronized(lock) {
+                    while (foundSnap == null) {
+                        val rem = deadline - System.currentTimeMillis()
+                        if (rem <= 0L) break
+                        lock.wait(rem.coerceAtMost(200L))
+                    }
+                }
+                if (foundSnap != null) {
+                    Thread.sleep(180L) // allow retained presence frames to flush
+                    val clusterUrl = if (
+                        client.host == "broker.emqx.io" && allowCrossClusterSearch
+                    ) {
+                        defaultServer
+                    } else {
+                        "https://${client.host}:${client.port}"
+                    }
+                    return RoomLookupResult(foundSnap!!, members.values.toList(), clusterUrl)
+                }
+            } finally {
+                client.close()
             }
-            foundSnap?.let { it to members.values.toList() }
-        } finally {
-            client.close()
+            if (!allowCrossClusterSearch) break
         }
+
+        if (!anyClusterConnected) {
+            throw lastError ?: PartyException("unreachable", UNREACHABLE)
+        }
+        return null
     }
 
     private fun connectFirstHealthyRelay(
@@ -1699,33 +1759,68 @@ object ListenTogether {
         clientId: String,
         willTopic: String? = null,
         willPayload: String? = null,
+    ): MiniMqttClient = connectFirstHealthyEndpoint(
+        endpoints = relayEndpointCandidatesFor(serverUrl),
+        clientId = clientId,
+        willTopic = willTopic,
+        willPayload = willPayload,
+    )
+
+    private fun connectFirstHealthyEndpoint(
+        endpoints: List<MiniMqttClient.RelayEndpoint>,
+        clientId: String,
+        willTopic: String? = null,
+        willPayload: String? = null,
     ): MiniMqttClient {
-        val candidates = relayCandidatesFor(serverUrl)
         var lastError: Throwable? = null
-        for ((host, port) in candidates) {
-            val client = MiniMqttClient(host, port, clientId)
+        for (ep in endpoints) {
+            val client = MiniMqttClient(ep.host, ep.port, clientId, ep.wsPath)
             try {
-                client.connect(willTopic = willTopic, willPayload = willPayload, willRetain = true, timeoutMs = 8_000)
+                client.connect(
+                    willTopic = willTopic,
+                    willPayload = willPayload,
+                    willRetain = true,
+                    timeoutMs = 5_000,
+                )
                 return client
             } catch (t: Throwable) {
                 lastError = t
+                Log.w(TAG, "MQTT endpoint ${ep.label} failed: ${redact(t.message)}")
                 runCatching { client.close() }
             }
         }
         throw lastError ?: PartyException("unreachable", UNREACHABLE)
     }
 
-    private fun relayCandidatesFor(serverUrl: String): List<Pair<String, Int>> {
+    private fun relayEndpointCandidatesFor(serverUrl: String): List<MiniMqttClient.RelayEndpoint> {
         val raw = normalizeServerBase(serverUrl)
-        if (raw.isBlank() || raw == defaultServer) return MiniMqttClient.DEFAULT_RELAYS
+        if (raw.isBlank() || raw == defaultServer) return MiniMqttClient.DEFAULT_ENDPOINTS
         val withScheme = if (raw.contains("://")) raw else "https://$raw"
         val parsed = runCatching { URI(withScheme) }.getOrNull()
-        val host = parsed?.host?.takeIf { it.isNotBlank() }
-        val port = parsed?.port?.takeIf { it in 1..65535 } ?: MiniMqttClient.DEFAULT_TLS_PORT
-        return if (host != null) {
-            listOf(host to port) + MiniMqttClient.DEFAULT_RELAYS
+        val host = parsed?.host?.takeIf { it.isNotBlank() } ?: return MiniMqttClient.DEFAULT_ENDPOINTS
+        val port = parsed.port.takeIf { it in 1..65535 } ?: MiniMqttClient.DEFAULT_TLS_PORT
+        val wsPath = if (parsed.scheme.equals("wss", ignoreCase = true) || parsed.scheme.equals("ws", ignoreCase = true)) {
+            parsed.path?.takeIf { it.isNotBlank() } ?: "/mqtt"
         } else {
-            MiniMqttClient.DEFAULT_RELAYS
+            null
+        }
+        return when {
+            host.equals("broker.emqx.io", ignoreCase = true) -> MiniMqttClient.DEFAULT_ENDPOINTS
+            host.equals("test.mosquitto.org", ignoreCase = true) -> {
+                val mosquittoFirst = listOf(
+                    MiniMqttClient.RelayEndpoint("test.mosquitto.org", 8886, wsPath = null),
+                    MiniMqttClient.RelayEndpoint("test.mosquitto.org", 8081, wsPath = "/mqtt"),
+                )
+                mosquittoFirst + MiniMqttClient.DEFAULT_ENDPOINTS.filterNot { it.host.equals("test.mosquitto.org", ignoreCase = true) }
+            }
+            host.equals("broker.hivemq.com", ignoreCase = true) -> {
+                val hiveFirst = listOf(
+                    MiniMqttClient.RelayEndpoint("broker.hivemq.com", 8883, wsPath = null),
+                    MiniMqttClient.RelayEndpoint("broker.hivemq.com", 8884, wsPath = "/mqtt"),
+                )
+                hiveFirst + MiniMqttClient.DEFAULT_ENDPOINTS.filterNot { it.host.equals("broker.hivemq.com", ignoreCase = true) }
+            }
+            else -> listOf(MiniMqttClient.RelayEndpoint(host, port, wsPath))
         }
     }
 

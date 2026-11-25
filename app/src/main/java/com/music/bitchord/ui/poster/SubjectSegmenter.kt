@@ -47,6 +47,31 @@ object SubjectSegmenter {
         )
     }
 
+    suspend fun segmentBitmap(context: Context, bitmap: Bitmap): SubjectCutoutResult = withContext(Dispatchers.Default) {
+        val src = scaleBitmapIfNeeded(bitmap, maxDim = 1280)
+        val cutout = segmentBitmapInternal(context.applicationContext, src)
+        SubjectCutoutResult(
+            backgroundBitmap = src,
+            cutoutBitmap = cutout.first,
+            coverage = cutout.second,
+            method = cutout.third,
+        )
+    }
+
+    private fun scaleBitmapIfNeeded(src: Bitmap, maxDim: Int): Bitmap {
+        val w = src.width
+        val h = src.height
+        val copy = if (w <= maxDim && h <= maxDim) {
+            src.copy(Bitmap.Config.ARGB_8888, false) ?: src
+        } else {
+            val scale = maxDim.toFloat() / max(w, h).toFloat()
+            val nw = max(1, (w * scale).toInt())
+            val nh = max(1, (h * scale).toInt())
+            Bitmap.createScaledBitmap(src, nw, nh, true)
+        }
+        return if (copy.config == Bitmap.Config.ARGB_8888) copy else copy.copy(Bitmap.Config.ARGB_8888, false) ?: copy
+    }
+
     fun segmentForeground(
         context: Context,
         imagePath: String,

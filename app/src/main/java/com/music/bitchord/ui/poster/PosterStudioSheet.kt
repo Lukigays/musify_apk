@@ -5,12 +5,15 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.Close
@@ -46,9 +50,11 @@ import androidx.compose.material.icons.rounded.FilterVintage
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -62,9 +68,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,6 +98,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -103,7 +112,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import com.music.bitchord.R
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.SearchFilter
@@ -138,16 +152,19 @@ private data class PosterCardItem(
     val id: String,
     val song: Song,
     val x: Float = 0.50f,
-    val y: Float = 0.62f,
+    val y: Float = 0.60f,
     val scale: Float = 1.0f,
     val rotationDeg: Float = 0f,
-    val tiltX: Float = 0f,
-    val tiltY: Float = 0f,
+    val tiltX: Float = Poster3dPreset.TILT_LEFT.tiltX,
+    val tiltY: Float = Poster3dPreset.TILT_LEFT.tiltY,
+    val depth3d: Float = Poster3dPreset.TILT_LEFT.depth3d,
     val style: PosterCardStyle = PosterCardStyle.DARK_PLAYER,
     val showControls: Boolean = true,
     val showHeart: Boolean = true,
     val showLyrics: Boolean = false,
     val behindSubject: Boolean = true,
+    val lineColor: Color = Color.White,
+    val lineWidthDp: Float = 1.5f,
 )
 
 private data class PosterStickerItem(
@@ -212,6 +229,8 @@ private fun PosterStudioContent(
     var grain by remember { mutableFloatStateOf(0.10f) }
     var vignette by remember { mutableFloatStateOf(0.28f) }
     var glow by remember { mutableFloatStateOf(0.22f) }
+    var frameColor by remember { mutableStateOf(Color.White) }
+    var frameWidthDp by remember { mutableFloatStateOf(0f) }
 
     var photoBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var cutoutBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -230,6 +249,7 @@ private fun PosterStudioContent(
         )
     }
     var selectedCardId by remember { mutableStateOf("main") }
+    var drag3dMode by remember { mutableStateOf(false) }
     var stickers by remember { mutableStateOf<List<PosterStickerItem>>(emptyList()) }
     var selectedStickerId by remember { mutableStateOf<String?>(null) }
 
@@ -275,6 +295,30 @@ private fun PosterStudioContent(
                 depthStrokes = emptyList()
             }
             segmenting = false
+        }
+    }
+
+    val segmentSongCover: () -> Unit = {
+        val url = request.song.thumbnailUrl
+        if (!url.isNullOrBlank() && !segmenting) {
+            segmenting = true
+            scope.launch {
+                val loader = SingletonImageLoader.get(context)
+                val req = ImageRequest.Builder(context)
+                    .data(url)
+                    .allowHardware(false)
+                    .build()
+                val resImg = (loader.execute(req) as? SuccessResult)?.image?.toBitmap()
+                if (resImg != null) {
+                    val seg = SubjectSegmenter.segmentBitmap(context, resImg)
+                    photoBitmap = seg.backgroundBitmap
+                    cutoutBitmap = seg.cutoutBitmap
+                    segmentMethod = seg.method
+                    backgroundMode = PosterBackgroundMode.PHOTO
+                    depthStrokes = emptyList()
+                }
+                segmenting = false
+            }
         }
     }
 
@@ -444,6 +488,7 @@ private fun PosterStudioContent(
                                     density = density,
                                     isSelected = !exportingOverlayHidden && card.id == selectedCardId && depthBrushMode == DepthBrushMode.OFF,
                                     interactive = depthBrushMode == DepthBrushMode.OFF,
+                                    drag3dMode = drag3dMode,
                                     onSelect = {
                                         selectedCardId = card.id
                                         selectedStickerId = null
@@ -500,6 +545,7 @@ private fun PosterStudioContent(
                                     density = density,
                                     isSelected = !exportingOverlayHidden && card.id == selectedCardId && depthBrushMode == DepthBrushMode.OFF,
                                     interactive = depthBrushMode == DepthBrushMode.OFF,
+                                    drag3dMode = drag3dMode,
                                     onSelect = {
                                         selectedCardId = card.id
                                         selectedStickerId = null
@@ -543,7 +589,16 @@ private fun PosterStudioContent(
                             modifier = Modifier.fillMaxSize(),
                         )
 
-                        // 7. Musify mark
+                        // 7. Optional customizable outer frame line (included in saved/shared PNG)
+                        if (frameWidthDp > 0.1f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .border(frameWidthDp.dp, frameColor, RoundedCornerShape(22.dp)),
+                            )
+                        }
+
+                        // 8. Musify mark
                         if (showLogo) {
                             Row(
                                 modifier = Modifier
@@ -560,7 +615,7 @@ private fun PosterStudioContent(
                             }
                         }
 
-                        // 8. Interactive Manual Depth Brush Overlay
+                        // 9. Interactive Manual Depth Brush Overlay
                         if (depthBrushMode != DepthBrushMode.OFF && backgroundMode == PosterBackgroundMode.PHOTO) {
                             Canvas(
                                 modifier = Modifier
@@ -599,7 +654,6 @@ private fun PosterStudioContent(
                                         )
                                     },
                             ) {
-                                // Visual brush stroke preview while dragging
                                 val tintBrush = if (depthBrushMode == DepthBrushMode.ADD) {
                                     Color(0x6634D399)
                                 } else {
@@ -665,7 +719,7 @@ private fun PosterStudioContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(176.dp)
+                        .height(210.dp)
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 14.dp),
                 ) {
@@ -675,6 +729,8 @@ private fun PosterStudioContent(
                             selectedCard = selectedCard,
                             lyricsAvailable = request.lyrics.isNotEmpty(),
                             showLogo = showLogo,
+                            drag3dMode = drag3dMode,
+                            onToggleDrag3d = { drag3dMode = !drag3dMode },
                             onSelectCard = { selectedCardId = it },
                             onAddCard = { if (cards.size < 4) showAddCardDialog = true },
                             onRemoveCard = { id ->
@@ -706,9 +762,12 @@ private fun PosterStudioContent(
                         StudioTab.DEPTH -> DepthTabPanel(
                             hasPhoto = photoBitmap != null,
                             hasCutout = cutoutBitmap != null,
+                            hasCoverUrl = !request.song.thumbnailUrl.isNullOrBlank(),
+                            segmenting = segmenting,
                             brushMode = depthBrushMode,
                             brushSize = brushRadiusNorm,
                             onPickPhoto = { photoPicker.launch("image/*") },
+                            onUseCoverCutout = segmentSongCover,
                             onBrushModeChange = { depthBrushMode = it },
                             onBrushSizeChange = { brushRadiusNorm = it },
                             onResetStrokes = {
@@ -751,11 +810,15 @@ private fun PosterStudioContent(
                             grain = grain,
                             vignette = vignette,
                             glow = glow,
+                            frameColor = frameColor,
+                            frameWidthDp = frameWidthDp,
                             onFilterChange = { colorFilter = it },
                             onSparkleChange = { sparkle = it },
                             onGrainChange = { grain = it },
                             onVignetteChange = { vignette = it },
                             onGlowChange = { glow = it },
+                            onFrameColorChange = { frameColor = it },
+                            onFrameWidthChange = { frameWidthDp = it },
                         )
                     }
                 }
@@ -774,6 +837,9 @@ private fun PosterStudioContent(
                     x = 0.50f,
                     y = 0.34f,
                     scale = 0.88f,
+                    tiltX = Poster3dPreset.TILT_RIGHT.tiltX,
+                    tiltY = Poster3dPreset.TILT_RIGHT.tiltY,
+                    depth3d = Poster3dPreset.TILT_RIGHT.depth3d,
                 )
                 cards = cards + added
                 selectedCardId = added.id
@@ -884,11 +950,13 @@ private fun InteractivePosterCard(
     density: Density,
     isSelected: Boolean,
     interactive: Boolean,
+    drag3dMode: Boolean,
     onSelect: () -> Unit,
     onGestureStart: () -> Unit,
     onUpdate: (PosterCardItem) -> Unit,
 ) {
     val currentItem by rememberUpdatedState(item)
+    val currentDrag3d by rememberUpdatedState(drag3dMode)
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentOnGestureStart by rememberUpdatedState(onGestureStart)
     val currentOnUpdate by rememberUpdatedState(onUpdate)
@@ -907,7 +975,13 @@ private fun InteractivePosterCard(
                 rotationZ = item.rotationDeg
                 rotationX = item.tiltX
                 rotationY = item.tiltY
-                cameraDistance = 12f * density.density
+                // Compose multiplies cameraDistance by device density internally;
+                // multiplying by density.density flattened 3D perspective ~3x too much.
+                cameraDistance = if (item.depth3d > 0.02f) {
+                    4.3f + (1f - item.depth3d.coerceIn(0f, 1f)) * 5.7f
+                } else {
+                    12f
+                }
             }
             .then(
                 if (interactive) {
@@ -923,20 +997,35 @@ private fun InteractivePosterCard(
                                 }
                             }
                         }
-                        .pointerInput(item.id, canvasW, canvasH) {
-                            detectTransformGestures { _, pan, zoom, rotation ->
-                                currentOnSelect()
-                                val latest = currentItem
-                                val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.05f, 0.95f)
-                                val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.05f, 0.95f)
-                                currentOnUpdate(
-                                    latest.copy(
-                                        x = nx,
-                                        y = ny,
-                                        scale = (latest.scale * zoom).coerceIn(0.45f, 2.2f),
-                                        rotationDeg = latest.rotationDeg + rotation,
-                                    ),
-                                )
+                        .pointerInput(item.id, canvasW, canvasH, drag3dMode) {
+                            if (currentDrag3d) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    currentOnSelect()
+                                    val latest = currentItem
+                                    currentOnUpdate(
+                                        latest.copy(
+                                            tiltY = (latest.tiltY + dragAmount.x * 0.30f).coerceIn(-42f, 42f),
+                                            tiltX = (latest.tiltX - dragAmount.y * 0.30f).coerceIn(-35f, 35f),
+                                            depth3d = if (latest.depth3d < 0.2f) 0.85f else latest.depth3d,
+                                        ),
+                                    )
+                                }
+                            } else {
+                                detectTransformGestures { _, pan, zoom, rotation ->
+                                    currentOnSelect()
+                                    val latest = currentItem
+                                    val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.05f, 0.95f)
+                                    val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.05f, 0.95f)
+                                    currentOnUpdate(
+                                        latest.copy(
+                                            x = nx,
+                                            y = ny,
+                                            scale = (latest.scale * zoom).coerceIn(0.45f, 2.2f),
+                                            rotationDeg = latest.rotationDeg + rotation,
+                                        ),
+                                    )
+                                }
                             }
                         }
                 } else {
@@ -945,7 +1034,8 @@ private fun InteractivePosterCard(
             )
             .then(
                 if (isSelected) {
-                    Modifier.border(1.5.dp, Color(0xFFFB5C74).copy(alpha = 0.85f), RoundedCornerShape(20.dp))
+                    val selShape = if (item.style == PosterCardStyle.VINYL) CircleShape else RoundedCornerShape(20.dp)
+                    Modifier.border(1.2.dp, Color(0xFFFB5C74).copy(alpha = 0.70f), selShape)
                 } else {
                     Modifier
                 },
@@ -959,6 +1049,11 @@ private fun InteractivePosterCard(
             showControls = item.showControls,
             showHeart = item.showHeart,
             lines = if (item.showLyrics) lyrics else emptyList(),
+            lineColor = item.lineColor,
+            lineWidthDp = item.lineWidthDp,
+            tiltX = item.tiltX,
+            tiltY = item.tiltY,
+            depth3d = item.depth3d,
         )
     }
 }
@@ -1057,6 +1152,8 @@ private fun CardsTabPanel(
     selectedCard: PosterCardItem?,
     lyricsAvailable: Boolean,
     showLogo: Boolean,
+    drag3dMode: Boolean,
+    onToggleDrag3d: () -> Unit,
     onSelectCard: (String) -> Unit,
     onAddCard: () -> Unit,
     onRemoveCard: (String) -> Unit,
@@ -1107,6 +1204,45 @@ private fun CardsTabPanel(
                 )
             }
         }
+
+        // Instant 3D depth presets + touch-3D rotation toggle
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilterChip(
+                selected = drag3dMode,
+                onClick = onToggleDrag3d,
+                label = { Text(if (drag3dMode) "Jari: Putar 3D" else "Putar 3D dgn Jari", fontSize = 11.sp) },
+                leadingIcon = { Icon(Icons.Rounded.TouchApp, null, modifier = Modifier.size(14.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF7C3AED),
+                    selectedLabelColor = Color.White,
+                    selectedLeadingIconColor = Color.White,
+                ),
+            )
+            Poster3dPreset.entries.forEach { preset ->
+                val isCurrent = kotlin.math.abs(selectedCard.tiltX - preset.tiltX) < 1.5f &&
+                    kotlin.math.abs(selectedCard.tiltY - preset.tiltY) < 1.5f &&
+                    kotlin.math.abs(selectedCard.depth3d - preset.depth3d) < 0.08f
+                FilterChip(
+                    selected = isCurrent,
+                    onClick = {
+                        onUpdateCard(
+                            selectedCard.copy(
+                                tiltX = preset.tiltX,
+                                tiltY = preset.tiltY,
+                                depth3d = preset.depth3d,
+                            ),
+                        )
+                    },
+                    label = { Text(preset.label, fontSize = 11.sp) },
+                    leadingIcon = { Icon(Icons.Rounded.Layers, null, modifier = Modifier.size(14.dp)) },
+                )
+            }
+        }
+
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1139,10 +1275,25 @@ private fun CardsTabPanel(
                 label = { Text("Badge Musify", fontSize = 11.sp) },
             )
         }
-        LabeledSlider("3D Putar X", selectedCard.tiltX, -28f..28f) {
+
+        Spacer(Modifier.height(4.dp))
+        FreeColorSelector(
+            label = "Warna Garis Kartu",
+            color = selectedCard.lineColor,
+            presets = POSTER_LINE_PALETTE,
+            onColorChange = { c -> onUpdateCard(selectedCard.copy(lineColor = c)) },
+            showResetWhite = true,
+        )
+        LabeledSlider("Tebal Garis", selectedCard.lineWidthDp, 0.6f..3.8f) {
+            onUpdateCard(selectedCard.copy(lineWidthDp = it))
+        }
+        LabeledSlider("Tebal & Efek 3D", selectedCard.depth3d, 0f..1f) {
+            onUpdateCard(selectedCard.copy(depth3d = it))
+        }
+        LabeledSlider("3D Putar X", selectedCard.tiltX, -35f..35f) {
             onUpdateCard(selectedCard.copy(tiltX = it))
         }
-        LabeledSlider("3D Putar Y", selectedCard.tiltY, -35f..35f) {
+        LabeledSlider("3D Putar Y", selectedCard.tiltY, -42f..42f) {
             onUpdateCard(selectedCard.copy(tiltY = it))
         }
         LabeledSlider("Skala Kartu", selectedCard.scale, 0.5f..1.8f) {
@@ -1204,48 +1355,52 @@ private fun BackgroundTabPanel(
         }
     }
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        POSTER_TINT_PALETTE.forEach { c ->
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(c)
-                    .border(
-                        width = if (c == tintColor) 2.5.dp else 1.dp,
-                        color = if (c == tintColor) Color.White else Color.White.copy(alpha = 0.3f),
-                        shape = CircleShape,
-                    )
-                    .clickable { onSelectTint(c) },
-            )
-        }
-    }
+    FreeColorSelector(
+        label = "Warna Tema",
+        color = tintColor,
+        presets = POSTER_TINT_PALETTE,
+        onColorChange = onSelectTint,
+    )
 }
 
 @Composable
 private fun DepthTabPanel(
     hasPhoto: Boolean,
     hasCutout: Boolean,
+    hasCoverUrl: Boolean,
+    segmenting: Boolean,
     brushMode: DepthBrushMode,
     brushSize: Float,
     onPickPhoto: () -> Unit,
+    onUseCoverCutout: () -> Unit,
     onBrushModeChange: (DepthBrushMode) -> Unit,
     onBrushSizeChange: (Float) -> Unit,
     onResetStrokes: () -> Unit,
 ) {
     if (!hasPhoto) {
         Text(
-            text = "Pilih foto dari galeri untuk mengaktifkan potongan subjek AI & efek kedalaman di belakang orang/objek.",
+            text = "Pilih foto galeri atau potong subjek cover lagu untuk mengaktifkan efek kedalaman di belakang objek.",
             color = Color.White.copy(alpha = 0.72f),
             fontSize = 12.sp,
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.padding(vertical = 6.dp),
         )
-        FilterChip(
-            selected = false,
-            onClick = onPickPhoto,
-            label = { Text("Pilih Foto Sekarang", fontSize = 12.sp) },
-            leadingIcon = { Icon(Icons.Rounded.PhotoLibrary, null, modifier = Modifier.size(16.dp)) },
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = false,
+                onClick = onPickPhoto,
+                label = { Text("Pilih Foto Galeri", fontSize = 11.sp) },
+                leadingIcon = { Icon(Icons.Rounded.PhotoLibrary, null, modifier = Modifier.size(15.dp)) },
+            )
+            if (hasCoverUrl) {
+                FilterChip(
+                    selected = false,
+                    enabled = !segmenting,
+                    onClick = onUseCoverCutout,
+                    label = { Text("Potong Cover Lagu (AI)", fontSize = 11.sp) },
+                    leadingIcon = { Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(15.dp)) },
+                )
+            }
+        }
         return
     }
     Text(
@@ -1275,6 +1430,15 @@ private fun DepthTabPanel(
             onClick = onResetStrokes,
             label = { Text("Reset Kuas", fontSize = 11.sp) },
         )
+        if (hasCoverUrl) {
+            FilterChip(
+                selected = false,
+                enabled = !segmenting,
+                onClick = onUseCoverCutout,
+                label = { Text("Pakai Cover", fontSize = 11.sp) },
+                leadingIcon = { Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(14.dp)) },
+            )
+        }
     }
     LabeledSlider("Ukuran Kuas", brushSize, 0.02f..0.16f) { onBrushSizeChange(it) }
 }
@@ -1323,21 +1487,18 @@ private fun StickersTabPanel(
                     label = { Text("Edit Teks", fontSize = 11.sp) },
                 )
             }
-            listOf(Color.White, Color(0xFFFB5C74), Color(0xFFFDE047), Color(0xFF60A5FA), Color(0xFF34D399)).forEach { col ->
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(col)
-                        .border(if (col == selected.color) 2.dp else 1.dp, Color.White, CircleShape)
-                        .clickable { onUpdateSticker(selected.copy(color = col)) },
-                )
-            }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { onDeleteSelected(selected.id) }) {
                 Icon(Icons.Rounded.DeleteOutline, contentDescription = "Hapus", tint = Color(0xFFF87171))
             }
         }
+        FreeColorSelector(
+            label = "Warna Stiker",
+            color = selected.color,
+            presets = POSTER_LINE_PALETTE,
+            onColorChange = { col -> onUpdateSticker(selected.copy(color = col)) },
+            showResetWhite = true,
+        )
         LabeledSlider("Skala Stiker", selected.scale, 0.4f..2.5f) {
             onUpdateSticker(selected.copy(scale = it))
         }
@@ -1354,11 +1515,15 @@ private fun EffectsTabPanel(
     grain: Float,
     vignette: Float,
     glow: Float,
+    frameColor: Color,
+    frameWidthDp: Float,
     onFilterChange: (PosterColorFilter) -> Unit,
     onSparkleChange: (Float) -> Unit,
     onGrainChange: (Float) -> Unit,
     onVignetteChange: (Float) -> Unit,
     onGlowChange: (Float) -> Unit,
+    onFrameColorChange: (Color) -> Unit,
+    onFrameWidthChange: (Float) -> Unit,
 ) {
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -1376,6 +1541,274 @@ private fun EffectsTabPanel(
     LabeledSlider("Film Grain", grain, 0f..1f, onGrainChange)
     LabeledSlider("Vignette", vignette, 0f..1f, onVignetteChange)
     LabeledSlider("Soft Glow", glow, 0f..1f, onGlowChange)
+    LabeledSlider("Garis Bingkai", frameWidthDp, 0f..6f, onFrameWidthChange)
+    if (frameWidthDp > 0.1f) {
+        FreeColorSelector(
+            label = "Warna Bingkai",
+            color = frameColor,
+            presets = POSTER_LINE_PALETTE,
+            onColorChange = onFrameColorChange,
+            showResetWhite = true,
+        )
+    }
+}
+
+/**
+ * Free HSV color picker + curated presets so users can choose any custom color
+ * for card lines/borders, theme tint, poster frame lines, or stickers.
+ */
+@Composable
+private fun FreeColorSelector(
+    label: String,
+    color: Color,
+    presets: List<Color>,
+    onColorChange: (Color) -> Unit,
+    showResetWhite: Boolean = false,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var lastEmitted by remember { mutableStateOf(color) }
+    var hue by remember { mutableFloatStateOf(composeColorToHsv(color)[0]) }
+    var sat by remember { mutableFloatStateOf(composeColorToHsv(color)[1]) }
+    var bri by remember { mutableFloatStateOf(composeColorToHsv(color)[2]) }
+
+    LaunchedEffect(color) {
+        if (color != lastEmitted) {
+            val hsv = composeColorToHsv(color)
+            if (hsv[1] > 0.01f && hsv[2] > 0.01f) hue = hsv[0]
+            sat = hsv[1]
+            bri = hsv[2]
+            lastEmitted = color
+        }
+    }
+
+    Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                color = Color.White.copy(alpha = 0.84f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(1.dp, color.copy(alpha = 0.85f), RoundedCornerShape(50))
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(0.7.dp, Color.White.copy(alpha = 0.7f), CircleShape),
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = composeColorToHex(color),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            FilterChip(
+                selected = expanded,
+                onClick = { expanded = !expanded },
+                label = { Text("Bebas HSV", fontSize = 10.sp) },
+                leadingIcon = { Icon(Icons.Rounded.Palette, null, modifier = Modifier.size(13.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFFFA233B),
+                    selectedLabelColor = Color.White,
+                    selectedLeadingIconColor = Color.White,
+                ),
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            presets.forEach { preset ->
+                val active = composeColorToHex(preset) == composeColorToHex(color)
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(preset)
+                        .border(
+                            width = if (active) 2.5.dp else 1.dp,
+                            color = if (active) Color(0xFFFB5C74) else Color.White.copy(alpha = 0.35f),
+                            shape = CircleShape,
+                        )
+                        .clickable {
+                            val hsv = composeColorToHsv(preset)
+                            if (hsv[1] > 0.01f && hsv[2] > 0.01f) hue = hsv[0]
+                            sat = hsv[1]
+                            bri = hsv[2]
+                            lastEmitted = preset
+                            onColorChange(preset)
+                        },
+                )
+            }
+            if (showResetWhite) {
+                Text(
+                    text = "Reset",
+                    color = Color.White.copy(alpha = 0.78f),
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .clickable {
+                            sat = 0f
+                            bri = 1f
+                            lastEmitted = Color.White
+                            onColorChange(Color.White)
+                        }
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.35f))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HsvColorBar(
+                    label = "Hue",
+                    fraction = (hue / 360f).coerceIn(0f, 1f),
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            Color(0xFFFF0000),
+                            Color(0xFFFFFF00),
+                            Color(0xFF00FF00),
+                            Color(0xFF00FFFF),
+                            Color(0xFF0000FF),
+                            Color(0xFFFF00FF),
+                            Color(0xFFFF0000),
+                        ),
+                    ),
+                    thumbColor = hsvToComposeColor(hue, 1f, 1f),
+                    onFractionChange = { f ->
+                        hue = (f * 360f).coerceIn(0f, 360f)
+                        if (sat < 0.05f && bri > 0.95f) {
+                            sat = 0.85f
+                        }
+                        val next = hsvToComposeColor(hue, sat, bri)
+                        lastEmitted = next
+                        onColorChange(next)
+                    },
+                )
+                HsvColorBar(
+                    label = "Jenuh",
+                    fraction = sat.coerceIn(0f, 1f),
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            hsvToComposeColor(hue, 0f, bri),
+                            hsvToComposeColor(hue, 1f, bri),
+                        ),
+                    ),
+                    thumbColor = hsvToComposeColor(hue, sat, bri),
+                    onFractionChange = { f ->
+                        sat = f.coerceIn(0f, 1f)
+                        val next = hsvToComposeColor(hue, sat, bri)
+                        lastEmitted = next
+                        onColorChange(next)
+                    },
+                )
+                HsvColorBar(
+                    label = "Terang",
+                    fraction = bri.coerceIn(0f, 1f),
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            Color.Black,
+                            hsvToComposeColor(hue, sat, 1f),
+                        ),
+                    ),
+                    thumbColor = hsvToComposeColor(hue, sat, bri),
+                    onFractionChange = { f ->
+                        bri = f.coerceIn(0f, 1f)
+                        val next = hsvToComposeColor(hue, sat, bri)
+                        lastEmitted = next
+                        onColorChange(next)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HsvColorBar(
+    label: String,
+    fraction: Float,
+    brush: Brush,
+    thumbColor: Color,
+    onFractionChange: (Float) -> Unit,
+) {
+    var widthPx by remember { mutableIntStateOf(1) }
+    val currentOnChange by rememberUpdatedState(onFractionChange)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.72f),
+            fontSize = 10.sp,
+            modifier = Modifier.width(44.dp),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(22.dp)
+                .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
+                .pointerInput(Unit) {
+                    detectTapGestures { pos ->
+                        currentOnChange((pos.x / widthPx.toFloat()).coerceIn(0f, 1f))
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures { change, _ ->
+                        change.consume()
+                        currentOnChange((change.position.x / widthPx.toFloat()).coerceIn(0f, 1f))
+                    }
+                },
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val trackH = 12.dp.toPx()
+                val topY = (size.height - trackH) / 2f
+                drawRoundRect(
+                    brush = brush,
+                    topLeft = Offset(0f, topY),
+                    size = Size(size.width, trackH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackH / 2f),
+                )
+                val cx = (fraction.coerceIn(0f, 1f) * size.width).coerceIn(8.dp.toPx(), size.width - 8.dp.toPx())
+                val cy = size.height / 2f
+                drawCircle(color = Color.White, radius = 8.5.dp.toPx(), center = Offset(cx, cy))
+                drawCircle(color = thumbColor, radius = 6.5.dp.toPx(), center = Offset(cx, cy))
+            }
+        }
+    }
 }
 
 @Composable
@@ -1393,7 +1826,7 @@ private fun LabeledSlider(
             text = label,
             color = Color.White.copy(alpha = 0.78f),
             fontSize = 11.sp,
-            modifier = Modifier.width(88.dp),
+            modifier = Modifier.width(96.dp),
             maxLines = 1,
         )
         Slider(
