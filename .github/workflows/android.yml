@@ -76,14 +76,44 @@ jobs:
     - name: Verify Signed Prod Release APK
       run: |
         ls -lh app/build/outputs/apk/prod/release/*.apk
-        UNIV=$(ls app/build/outputs/apk/prod/release/*universal*.apk | head -n1)
-        echo "Universal APK: $UNIV"
-        unzip -l "$UNIV" | grep -q "resources.arsc"
-        unzip -l "$UNIV" | grep -q "AndroidManifest.xml"
-        unzip -l "$UNIV" | grep -qE "classes[0-9]*\.dex"
         APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -n1 || true)
-        if [ -n "$APKSIGNER" ]; then
-          "$APKSIGNER" verify --verbose "$UNIV"
+        AAPT2=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort | tail -n1 || true)
+        ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort | tail -n1 || true)
+
+        for apk in \
+          app/build/outputs/apk/prod/release/*.apk \
+          tv/build/outputs/apk/prod/release/*.apk \
+          wearos/build/outputs/apk/prod/release/*.apk
+        do
+          [ -f "$apk" ] || continue
+          echo "=== Verifying $apk ==="
+          unzip -tqq "$apk"
+          unzip -l "$apk" | grep -q "resources.arsc"
+          unzip -l "$apk" | grep -q "AndroidManifest.xml"
+          unzip -l "$apk" | grep -qE "classes[0-9]*\.dex"
+
+          if [ -n "$ZIPALIGN" ]; then
+            "$ZIPALIGN" -c -P 16 4 "$apk" || "$ZIPALIGN" -c 4 "$apk"
+          fi
+
+          if [ -n "$APKSIGNER" ]; then
+            VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$apk")
+            echo "$VERIFY_OUT"
+            echo "$VERIFY_OUT" | grep -qE "Verified using v1 scheme.*: true"
+            echo "$VERIFY_OUT" | grep -qE "Verified using v2 scheme.*: true"
+            echo "$VERIFY_OUT" | grep -qE "Verified using v3 scheme.*: true"
+          fi
+        done
+
+        if [ -n "$AAPT2" ]; then
+          for apk in \
+            app/build/outputs/apk/prod/release/*universal*.apk \
+            app/build/outputs/apk/prod/release/*arm64-v8a*.apk
+          do
+            [ -f "$apk" ] || continue
+            echo "=== aapt2 badging $apk ==="
+            "$AAPT2" dump badging "$apk" | head -n 30
+          done
         fi
 
     - name: Prepare Release APKs
