@@ -114,11 +114,13 @@ jobs:
           fi
 
           if [ -n "$APKSIGNER" ]; then
-            VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$apk")
+            unzip -l "$apk" | grep -qE "META-INF/.*\.(RSA|DSA|EC)"
+            VERIFY_OUT=$("$APKSIGNER" verify --verbose --min-sdk-version 23 --print-certs "$apk")
             echo "$VERIFY_OUT"
             echo "$VERIFY_OUT" | grep -qE "Verified using v1 scheme.*: true"
             echo "$VERIFY_OUT" | grep -qE "Verified using v2 scheme.*: true"
             echo "$VERIFY_OUT" | grep -qE "Verified using v3 scheme.*: true"
+            "$APKSIGNER" verify "$apk"
           fi
         done
 
