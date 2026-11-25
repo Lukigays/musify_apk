@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * after the second chorus is of no use to anyone, and the fallbacks behind it
  * are the better answer.
  */
-private const val LYRICS_TIMEOUT_SECONDS = 6L
+private const val LYRICS_TIMEOUT_SECONDS = 4L
 
 internal const val LYRICS_AGENT = "Musify (https://github.com/Lukigays/musify_apk)"
 
@@ -25,18 +25,17 @@ private val client by lazy {
     // common — only the deadline differs.
     Http.client.newBuilder()
         .callTimeout(LYRICS_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .connectTimeout(3, TimeUnit.SECONDS)
+        .connectTimeout(2500, TimeUnit.MILLISECONDS)
         .build()
 }
 
 // PaxSenix's authenticated routes often have to query an upstream catalogue
-// before answering. Keep the fast deadline for the ordinary providers, but
-// match PaxSenix's own client timeout here so valid requests are not discarded
-// while its backend is still resolving a track.
+// before answering. Keep the fast deadline for the ordinary providers, while
+// capping authenticated requests well below stream timeouts so fallback stays snappy.
 private val authenticatedClient by lazy {
     client.newBuilder()
-        .callTimeout(15, TimeUnit.SECONDS)
-        .connectTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(4, TimeUnit.SECONDS)
         .build()
 }
 

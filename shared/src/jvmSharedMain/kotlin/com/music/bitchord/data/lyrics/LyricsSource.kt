@@ -60,6 +60,16 @@ enum class LyricsSource(
         detail = "QQ Music karaoke timings through BetterLyrics",
         wordSynced = true,
     ),
+    LYRICS_PLUS(
+        label = "LyricsPlus",
+        detail = "Syllable by syllable, on community mirrors",
+        wordSynced = true,
+    ),
+    UNISON(
+        label = "Unison",
+        detail = "Contributed by listeners, so it has what nobody licensed",
+        wordSynced = true,
+    ),
     PAXSENIX(
         label = "PaxSenix",
         detail = "Apple Music timings through the original keyless provider",
@@ -75,21 +85,11 @@ enum class LyricsSource(
         detail = "Musixmatch timings with PaxSenix fallback; API key required",
         wordSynced = true,
     ),
-    LYRICS_PLUS(
-        label = "LyricsPlus",
-        detail = "Syllable by syllable, on community mirrors",
-        wordSynced = true,
-    ),
     SIMP_MUSIC(
         label = "SimpMusic",
         detail = "Matched on the video, so never the wrong edit",
         wordSynced = true,
         hidden = true,
-    ),
-    UNISON(
-        label = "Unison",
-        detail = "Contributed by listeners, so it has what nobody licensed",
-        wordSynced = true,
     ),
     YOUTUBE_TRANSCRIPT(
         label = "YouTube captions",

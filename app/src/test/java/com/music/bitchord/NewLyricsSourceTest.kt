@@ -202,4 +202,31 @@ class NewLyricsSourceTest {
         assertEquals("Tame Impala", "Tame Impala - Topic".artistForLyricsSearch())
         assertEquals("Tame Impala", "Tame Impala".artistForLyricsSearch())
     }
+
+    @Test
+    fun `unison preserves recording ISRC when present`() {
+        val raw = """
+            {"success":true,"data":{"song":"Ain't In LA","artist":"ADÉLA",
+            "isrc":"USUM72605978","format":"ttml","syncType":"wordsync",
+            "lyrics":"<tt><body><div><p begin=\"1.0\" end=\"2.0\"><span begin=\"1.0\" end=\"2.0\">Hi</span></p></div></body></tt>"}}
+        """.trimIndent().replace("\n", "")
+        val response = lyricsJson.decodeFromString<Unison.Response>(raw)
+        assertEquals("USUM72605978", response.data?.isrc)
+    }
+
+    @Test
+    fun `lrc red tolerates modest YouTube-vs-Apple duration differences`() {
+        val hits = listOf(
+            com.music.bitchord.data.lyrics.LrcRed.Hit(
+                isrc = "USUM72605978",
+                title = "Ain't In LA",
+                artist = "ADÉLA",
+                duration = 185.0,
+            ),
+        )
+        assertEquals(
+            "USUM72605978",
+            com.music.bitchord.data.lyrics.LrcRed.best(hits, "Ain't In LA", "ADÉLA", 189_500L)?.isrc,
+        )
+    }
 }

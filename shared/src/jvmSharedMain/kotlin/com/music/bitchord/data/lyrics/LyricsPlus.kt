@@ -3,8 +3,10 @@ package com.music.bitchord.data.lyrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -32,12 +34,12 @@ object LyricsPlus {
 
     private val MIRRORS = listOf(
         "https://lyricsplus.prjktla.my.id",
-        "https://lyricsplus.atomix.one",
         "https://lyricsplus.binimum.org",
-        "https://lyricsplus.prjktla.workers.dev",
-        "https://lyricsplus-seven.vercel.app",
-        "https://lyrics-plus-backend.vercel.app",
     )
+
+    private const val SECONDARY_START_DELAY_MS = 700L
+    private const val SECONDARY_TIMEOUT_MS = 2_200L
+    private const val PREFERRED_SOURCES = "apple,lyricsplus,musixmatch,qq"
 
     private val lastGood = AtomicReference<String?>(null)
 
@@ -49,12 +51,22 @@ object LyricsPlus {
         isrc: String? = null,
     ): List<LyricLine>? = coroutineScope {
         val hosts = lastGood.get()
+            ?.takeIf { it in MIRRORS }
             ?.let { listOf(it) + MIRRORS.filterNot { mirror -> mirror == it } }
             ?: MIRRORS
 
-        val pending = hosts.map { host ->
-            host to async(Dispatchers.IO) { fetch(host, title, artist, durationMs, album, isrc) }
-        }.toMutableList()
+        val primary = hosts.first()
+        val secondary = hosts.drop(1)
+        val pending = mutableListOf<Pair<String, kotlinx.coroutines.Deferred<List<LyricLine>?>>>()
+        pending += primary to async(Dispatchers.IO) { fetch(primary, title, artist, durationMs, album, isrc) }
+        secondary.forEach { host ->
+            pending += host to async(Dispatchers.IO) {
+                delay(SECONDARY_START_DELAY_MS)
+                withTimeoutOrNull(SECONDARY_TIMEOUT_MS) {
+                    fetch(host, title, artist, durationMs, album, isrc)
+                }
+            }
+        }
 
         // Take the first mirror to answer with something usable rather than
         // the first to answer at all — a mirror that 404s this track shouldn't
@@ -76,6 +88,29 @@ object LyricsPlus {
         }
     }
 
+    internal fun buildUrl(
+        host: String,
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String?,
+        isrc: String?,
+    ): String = "$host/v2/lyrics/get".toHttpUrl().newBuilder()
+        .addQueryParameter("title", title)
+        .addQueryParameter("artist", artist)
+        .addQueryParameter("source", PREFERRED_SOURCES)
+        .apply {
+            val seconds = durationMs / 1000
+            if (seconds > 0) addQueryParameter("duration", seconds.toString())
+            if (!album.isNullOrBlank()) addQueryParameter("album", album)
+            // Sent alongside the name rather than instead of it: unlike
+            // [BiniLyrics] this backend aggregates several catalogues, and
+            // the ones with no ISRC index still need something to match on.
+            if (!isrc.isNullOrBlank()) addQueryParameter("isrc", isrc)
+        }
+        .build()
+        .toString()
+
     private suspend fun fetch(
         host: String,
         title: String,
@@ -84,21 +119,8 @@ object LyricsPlus {
         album: String?,
         isrc: String?,
     ): List<LyricLine>? = withContext(Dispatchers.IO) {
-        val url = "$host/v2/lyrics/get".toHttpUrl().newBuilder()
-            .addQueryParameter("title", title)
-            .addQueryParameter("artist", artist)
-            .apply {
-                val seconds = durationMs / 1000
-                if (seconds > 0) addQueryParameter("duration", seconds.toString())
-                if (!album.isNullOrBlank()) addQueryParameter("album", album)
-                // Sent alongside the name rather than instead of it: unlike
-                // [BiniLyrics] this backend aggregates several catalogues, and
-                // the ones with no ISRC index still need something to match on.
-                if (!isrc.isNullOrBlank()) addQueryParameter("isrc", isrc)
-            }
-            .build()
-
-        val body = lyricsGet(url.toString()) ?: return@withContext null
+        val body = lyricsGet(buildUrl(host, title, artist, durationMs, album, isrc))
+            ?: return@withContext null
         val response = runCatching { lyricsJson.decodeFromString<Response>(body) }.getOrNull()
             ?: return@withContext null
         parse(response).takeIf { it.isNotEmpty() }

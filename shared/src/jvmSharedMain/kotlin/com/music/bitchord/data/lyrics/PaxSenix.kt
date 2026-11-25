@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -13,6 +14,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
@@ -22,9 +24,12 @@ object PaxSenix {
     private const val PUBLIC_PROXY = "https://lyrics.paxsenix.org"
     private const val APPLE_SEARCH = "https://amp-api.music.apple.com/v1/catalog/us/search"
     private const val MINIMUM_MATCH_SCORE = 10
+    private const val TOKEN_FAILURE_COOLDOWN_MS = 5 * 60_000L
+    private const val TOKEN_SCRAPE_TIMEOUT_MS = 2_500L
 
     private val tokenMutex = Mutex()
     private val cachedAppleToken = AtomicReference<String?>(null)
+    private val tokenFailedAtMs = AtomicLong(0L)
 
     @Volatile
     private var apiKey: String = ""
@@ -95,8 +100,29 @@ object PaxSenix {
         return bestCandidate(root, title, artist, durationMs)?.id
     }
 
-    private suspend fun appleToken(): String? = cachedAppleToken.get() ?: tokenMutex.withLock {
-        cachedAppleToken.get() ?: scrapeAppleToken()?.also(cachedAppleToken::set)
+    private suspend fun appleToken(): String? {
+        cachedAppleToken.get()?.let { return it }
+        val failedAt = tokenFailedAtMs.get()
+        if (failedAt > 0L && System.currentTimeMillis() - failedAt < TOKEN_FAILURE_COOLDOWN_MS) {
+            return null
+        }
+        return tokenMutex.withLock {
+            cachedAppleToken.get()?.let { return@withLock it }
+            val recheckFailed = tokenFailedAtMs.get()
+            if (recheckFailed > 0L && System.currentTimeMillis() - recheckFailed < TOKEN_FAILURE_COOLDOWN_MS) {
+                return@withLock null
+            }
+            val token = withTimeoutOrNull(TOKEN_SCRAPE_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) { scrapeAppleToken() }
+            }
+            if (token != null) {
+                cachedAppleToken.set(token)
+                tokenFailedAtMs.set(0L)
+            } else {
+                tokenFailedAtMs.set(System.currentTimeMillis())
+            }
+            token
+        }
     }
 
     private fun scrapeAppleToken(): String? {

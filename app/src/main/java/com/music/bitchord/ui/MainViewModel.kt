@@ -459,6 +459,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 lyricsFor = null
                 return@launch
             }
+            @Volatile var lookupCompleted = false
             val found = LyricsRepository.lyrics(
                 videoId, title, artist, durationMs, album, sources,
                 AppSettings.lyricsSourceOrder.value, AppSettings.prioritizeSyllableSync.value,
@@ -467,7 +468,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     providerFinished(generation, source, result)
                 },
                 onSourceCancelled = { source -> providerCancelled(generation, source) },
+                onPreliminaryResult = { preliminary ->
+                    viewModelScope.launch {
+                        if (lookupCompleted || generation != lyricsGeneration) return@launch
+                        if (selectedLyricsSource != null) return@launch
+                        if (embeddedPlain != null && !EmbeddedLyrics.isSynced(preliminary.lines)) {
+                            return@launch
+                        }
+                        _lyrics.value = preliminary.lines
+                        _lyricsSource.value = preliminary.source
+                        _lyricsChecked.value = true
+                    }
+                },
             )
+            lookupCompleted = true
             val picked = selectedLyricsSource?.let(lyricsProviderResults::get)
             // The file's own words beat a stranger's untimed copy; only timing,
             // or a provider the listener picked by hand, displaces them.

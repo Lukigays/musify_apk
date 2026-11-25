@@ -29,12 +29,21 @@ object Unison {
 
     private const val BASE = "https://unison.boidu.dev/lyrics"
 
+    data class Match(val isrc: String?, val lines: List<LyricLine>)
+
     suspend fun lyrics(
         title: String,
         artist: String,
         durationMs: Long,
         album: String? = null,
-    ): List<LyricLine>? = withContext(Dispatchers.IO) {
+    ): List<LyricLine>? = lyricsMatch(title, artist, durationMs, album)?.lines
+
+    suspend fun lyricsMatch(
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String? = null,
+    ): Match? = withContext(Dispatchers.IO) {
         val url = BASE.toHttpUrl().newBuilder()
             .addQueryParameter("song", title)
             .addQueryParameter("artist", artist)
@@ -49,7 +58,9 @@ object Unison {
         val response = runCatching { lyricsJson.decodeFromString<Response>(body) }.getOrNull()
             ?: return@withContext null
         if (response.success != true) return@withContext null
-        linesOf(response.data ?: return@withContext null)
+        val entry = response.data ?: return@withContext null
+        val lines = linesOf(entry) ?: return@withContext null
+        Match(entry.isrc?.takeIf { it.isNotBlank() }, lines)
     }
 
     /** The three shapes, told apart by what the entry says it is. */
@@ -92,6 +103,7 @@ object Unison {
         val song: String? = null,
         val artist: String? = null,
         val album: String? = null,
+        val isrc: String? = null,
         val lyrics: String? = null,
         /** `ttml` or `lrc`. */
         val format: String? = null,

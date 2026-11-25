@@ -39,10 +39,14 @@ jobs:
         echo "LISTEN_TOGETHER_SERVER=${LISTEN_TOGETHER_SERVER:-https://broker.emqx.io:8883}" >> local.properties
 
         if [ -n "$KEYSTORE_BASE64" ]; then
-          echo "$KEYSTORE_BASE64" | base64 -d > musify-release.jks
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\n\r ' | base64 -d > musify-release.jks
           STORE_PASS="$KEYSTORE_PASSWORD"
           ALIAS="$KEY_ALIAS"
           KEY_PASS="$KEY_PASSWORD"
+          keytool -list -keystore musify-release.jks -storepass "$STORE_PASS" -alias "$ALIAS" >/dev/null
+        elif [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+          echo "::error::KEYSTORE_BASE64 secret is missing on main; refusing to sign release with an ephemeral keystore."
+          exit 1
         else
           STORE_PASS="musifyrelease"
           ALIAS="musify"
