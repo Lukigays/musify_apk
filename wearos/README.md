@@ -1,6 +1,6 @@
-# BitChord for Wear OS
+# Musify for Wear OS
 
-A watch remote for the BitChord phone app: now playing over the player's mesh
+A watch remote for the Musify phone app: now playing over the player's mesh
 backdrop, play/pause on the cover with a progress ring (hold it to seek), skip,
 Love where the phone offers it, Up Next, shuffle, repeat, the phone's volume on
 the crown or bezel, an always-on player, and an Output picker covering the
@@ -30,18 +30,17 @@ build type, and the app listens only while it is on screen or playing.
 ## Dev and prod
 
 The Wearable Data Layer only connects apps that have the same package name and
-the same signing key. So the watch app takes the phone app's ids:
+the same signing key. So the watch app takes the phone app's IDs:
 
 | Watch build | Package | Pairs with |
 | --- | --- | --- |
-| `devDebug` | `com.dev.bitchord` | the phone's `devDebug` (debug key) |
-| `prodRelease` | `com.music.bitchord` | the phone's `prodRelease` (release key) |
+| `devDebug` | `com.lukyy.musify.dev` | the phone's `devDebug` (debug key) |
+| `prodRelease` | `com.lukyy.musify` | the phone's `prodRelease` (release key) |
 
 A watch build only finds a phone build of the same flavor **and** signed with
-the same key. Published phone APKs are signed in CI with the key from
-`secrets.KEYSTORE_BASE64`, which is not the keystore in a local checkout, so
-the prod watch APK for those phones has to come from CI too. `android.yml`
-uploads it as `bitchord-wear-prod-release-signed`.
+the same key. Published phone APKs are signed in CI (`android.yml`), which also
+uploads the matching watch APK as `musify-wear-prod-release-signed` and
+publishes `MusifyWear-v*.apk` on GitHub Releases.
 
 ## Build and install
 
@@ -58,9 +57,6 @@ adb pair <watch-ip>:<pairing-port>
 adb connect <watch-ip>:<port>
 adb -s <watch-ip>:<port> install -r wearos/build/outputs/apk/dev/debug/BitChordWear-dev-debug.apk
 ```
-
-The phone needs a BitChord build that includes `WearBridge` (anything from this
-change on), from the same flavor and signed with the same key.
 
 Debug builds are shrunk and non-debuggable, because an un-R8'd, debuggable
 Compose app is noticeably slower on a watch CPU. To get a debugger back, pass
