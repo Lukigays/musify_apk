@@ -151,4 +151,65 @@ class YouTubeMusicLyricsTest {
         )
         assertEquals(listOf("sooner", "later"), lines?.map { it.text })
     }
+
+    @Test
+    fun `finds localized Indonesian Lirik tab via MPLY browseId`() {
+        val next = page(
+            """
+            {
+              "contents": {
+                "singleColumnMusicWatchNextResultsRenderer": {
+                  "tabbedRenderer": {
+                    "watchNextTabbedResultsRenderer": {
+                      "tabs": [
+                        {
+                          "tabRenderer": {
+                            "title": "Berikutnya",
+                            "endpoint": { "watchEndpoint": { "videoId": "-JIazHCRk9A" } }
+                          }
+                        },
+                        {
+                          "tabRenderer": {
+                            "title": "Lirik",
+                            "endpoint": { "browseEndpoint": { "browseId": "MPLYt_5ruOkUYLVZL-22", "params": "abc" } }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val endpoint = lyricsBrowseEndpoint(next)
+        assertEquals("MPLYt_5ruOkUYLVZL-22" to "abc", endpoint)
+    }
+
+    @Test
+    fun `BetterLyrics retries without album when album edition query fails`() {
+        val requestedUrls = mutableListOf<String>()
+        val lines = BetterLyrics.fetchWithFallback(
+            endpoint = "https://lyrics-api.boidu.dev/getLyrics",
+            title = "Good Days",
+            artist = "SZA",
+            durationMs = 278_000L,
+            album = "SOS (LANA)",
+        ) { url ->
+            requestedUrls += url
+            if ("al=" in url) null else """{"lrc":"[00:10.00] Good day in my mind"}"""
+        }
+        assertEquals(2, requestedUrls.size)
+        assertTrue("al=" in requestedUrls[0])
+        assertFalse("al=" in requestedUrls[1])
+        assertEquals(listOf("Good day in my mind"), lines?.map { it.text })
+    }
+
+    @Test
+    fun `duration cache key allows plus or minus two seconds drift`() {
+        assertTrue(LyricsRepository.compatibleDurationSeconds(278L, 279L))
+        assertTrue(LyricsRepository.compatibleDurationSeconds(278L, 280L))
+        assertFalse(LyricsRepository.compatibleDurationSeconds(278L, 281L))
+        assertFalse(LyricsRepository.compatibleDurationSeconds(0L, 278L))
+    }
 }

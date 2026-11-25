@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  * after the second chorus is of no use to anyone, and the fallbacks behind it
  * are the better answer.
  */
-private const val LYRICS_TIMEOUT_SECONDS = 4L
+private const val LYRICS_TIMEOUT_SECONDS = 8L
 
 internal const val LYRICS_AGENT = "Musify (https://github.com/Lukigays/musify_apk)"
 
@@ -25,7 +25,7 @@ private val client by lazy {
     // common — only the deadline differs.
     Http.client.newBuilder()
         .callTimeout(LYRICS_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .connectTimeout(2500, TimeUnit.MILLISECONDS)
+        .connectTimeout(4000, TimeUnit.MILLISECONDS)
         .build()
 }
 
@@ -34,8 +34,8 @@ private val client by lazy {
 // capping authenticated requests well below stream timeouts so fallback stays snappy.
 private val authenticatedClient by lazy {
     client.newBuilder()
-        .callTimeout(8, TimeUnit.SECONDS)
-        .connectTimeout(4, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
         .build()
 }
 

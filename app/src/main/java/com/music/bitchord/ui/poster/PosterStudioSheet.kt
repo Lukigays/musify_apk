@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -98,6 +99,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -105,8 +107,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -153,7 +157,7 @@ private data class PosterCardItem(
     val song: Song,
     val x: Float = 0.50f,
     val y: Float = 0.60f,
-    val scale: Float = 1.0f,
+    val scale: Float = POSTER_CARD_DEFAULT_SCALE,
     val rotationDeg: Float = 0f,
     val tiltX: Float = Poster3dPreset.TILT_LEFT.tiltX,
     val tiltY: Float = Poster3dPreset.TILT_LEFT.tiltY,
@@ -836,7 +840,7 @@ private fun PosterStudioContent(
                     song = song,
                     x = 0.50f,
                     y = 0.34f,
-                    scale = 0.88f,
+                    scale = POSTER_CARD_SECONDARY_SCALE,
                     tiltX = Poster3dPreset.TILT_RIGHT.tiltX,
                     tiltY = Poster3dPreset.TILT_RIGHT.tiltY,
                     depth3d = Poster3dPreset.TILT_RIGHT.depth3d,
@@ -961,32 +965,57 @@ private fun InteractivePosterCard(
     val currentOnGestureStart by rememberUpdatedState(onGestureStart)
     val currentOnUpdate by rememberUpdatedState(onUpdate)
 
-    val cardWidthPx = with(density) { 192.dp.toPx() }
-    val estHeightPx = with(density) { 240.dp.toPx() }
-    val pxX = (item.x * canvasW) - cardWidthPx / 2f
-    val pxY = (item.y * canvasH) - estHeightPx / 2f
+    val canvasWidthDp = with(density) { canvasW.toDp().value }
+    val canvasHeightDp = with(density) { canvasH.toDp().value }
+    val viewportScale = posterCardViewportScale(canvasWidthDp, canvasHeightDp)
+    val effectiveScale = posterCardEffectiveScale(item.scale, viewportScale)
+    val interactionSource = remember { MutableInteractionSource() }
+    var measuredSize by remember(item.id) { mutableStateOf(IntSize.Zero) }
+    val minTouchPx = with(density) { 48.dp.roundToPx() }
+    val fallbackW = with(density) { (POSTER_CARD_BASE_WIDTH_DP * effectiveScale).dp.toPx() }.roundToInt()
+    val fallbackH = with(density) { (210f * effectiveScale).dp.toPx() }.roundToInt()
+    val hitW = if (measuredSize.width > 0) {
+        (measuredSize.width * effectiveScale).roundToInt().coerceAtLeast(minTouchPx)
+    } else {
+        fallbackW.coerceAtLeast(minTouchPx)
+    }
+    val hitH = if (measuredSize.height > 0) {
+        (measuredSize.height * effectiveScale).roundToInt().coerceAtLeast(minTouchPx)
+    } else {
+        fallbackH.coerceAtLeast(minTouchPx)
+    }
+    val pxX = (item.x * canvasW) - hitW / 2f
+    val pxY = (item.y * canvasH) - hitH / 2f
 
+    // Pointer gesture modifier intentionally sits BEFORE graphicsLayer so pan deltas
+    // stay in unscaled/unrotated canvas pixel coordinates even when scaled or tilted in 3D.
     Box(
         modifier = Modifier
             .offset { IntOffset(pxX.roundToInt(), pxY.roundToInt()) }
-            .graphicsLayer {
-                scaleX = item.scale
-                scaleY = item.scale
-                rotationZ = item.rotationDeg
-                rotationX = item.tiltX
-                rotationY = item.tiltY
-                // Compose multiplies cameraDistance by device density internally;
-                // multiplying by density.density flattened 3D perspective ~3x too much.
-                cameraDistance = if (item.depth3d > 0.02f) {
-                    4.3f + (1f - item.depth3d.coerceIn(0f, 1f)) * 5.7f
-                } else {
-                    12f
+            .layout { measurable, constraints ->
+                val unconstrained = constraints.copy(
+                    minWidth = 0,
+                    minHeight = 0,
+                    maxWidth = Constraints.Infinity,
+                    maxHeight = Constraints.Infinity,
+                )
+                val placeable = measurable.measure(unconstrained)
+                val outW = (placeable.width * effectiveScale).roundToInt().coerceAtLeast(minTouchPx)
+                val outH = (placeable.height * effectiveScale).roundToInt().coerceAtLeast(minTouchPx)
+                layout(outW, outH) {
+                    placeable.place(
+                        x = (outW - placeable.width) / 2,
+                        y = (outH - placeable.height) / 2,
+                    )
                 }
             }
             .then(
                 if (interactive) {
                     Modifier
-                        .clickable { currentOnSelect() }
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                        ) { currentOnSelect() }
                         .pointerInput("undo-${item.id}") {
                             awaitPointerEventScope {
                                 while (true) {
@@ -1015,13 +1044,16 @@ private fun InteractivePosterCard(
                                 detectTransformGestures { _, pan, zoom, rotation ->
                                     currentOnSelect()
                                     val latest = currentItem
-                                    val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.05f, 0.95f)
-                                    val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.05f, 0.95f)
+                                    val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.03f, 0.97f)
+                                    val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.03f, 0.97f)
                                     currentOnUpdate(
                                         latest.copy(
                                             x = nx,
                                             y = ny,
-                                            scale = (latest.scale * zoom).coerceIn(0.45f, 2.2f),
+                                            scale = (latest.scale * zoom).coerceIn(
+                                                POSTER_CARD_MIN_SCALE,
+                                                POSTER_CARD_MAX_SCALE,
+                                            ),
                                             rotationDeg = latest.rotationDeg + rotation,
                                         ),
                                     )
@@ -1031,30 +1063,50 @@ private fun InteractivePosterCard(
                 } else {
                     Modifier
                 },
-            )
-            .then(
-                if (isSelected) {
-                    val selShape = if (item.style == PosterCardStyle.VINYL) CircleShape else RoundedCornerShape(20.dp)
-                    Modifier.border(1.2.dp, Color(0xFFFB5C74).copy(alpha = 0.70f), selShape)
-                } else {
-                    Modifier
-                },
             ),
     ) {
-        PosterSongCard(
-            song = item.song,
-            style = item.style,
-            tint = tint,
-            fontStyle = fontStyle,
-            showControls = item.showControls,
-            showHeart = item.showHeart,
-            lines = if (item.showLyrics) lyrics else emptyList(),
-            lineColor = item.lineColor,
-            lineWidthDp = item.lineWidthDp,
-            tiltX = item.tiltX,
-            tiltY = item.tiltY,
-            depth3d = item.depth3d,
-        )
+        Box(
+            modifier = Modifier
+                .onSizeChanged { measuredSize = it }
+                .graphicsLayer {
+                    scaleX = effectiveScale
+                    scaleY = effectiveScale
+                    rotationZ = item.rotationDeg
+                    rotationX = item.tiltX
+                    rotationY = item.tiltY
+                    // Compose multiplies cameraDistance by device density internally;
+                    // multiplying by density.density flattened 3D perspective ~3x too much.
+                    cameraDistance = if (item.depth3d > 0.02f) {
+                        4.3f + (1f - item.depth3d.coerceIn(0f, 1f)) * 5.7f
+                    } else {
+                        12f
+                    }
+                }
+                .then(
+                    if (isSelected) {
+                        val selShape = if (item.style == PosterCardStyle.VINYL) CircleShape else RoundedCornerShape(20.dp)
+                        Modifier.border(1.2.dp, Color(0xFFFB5C74).copy(alpha = 0.70f), selShape)
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            PosterSongCard(
+                song = item.song,
+                style = item.style,
+                tint = tint,
+                fontStyle = fontStyle,
+                showControls = item.showControls,
+                showHeart = item.showHeart,
+                lines = if (item.showLyrics) lyrics else emptyList(),
+                cardWidth = POSTER_CARD_BASE_WIDTH_DP.dp,
+                lineColor = item.lineColor,
+                lineWidthDp = item.lineWidthDp,
+                tiltX = item.tiltX,
+                tiltY = item.tiltY,
+                depth3d = item.depth3d,
+            )
+        }
     }
 }
 
@@ -1079,22 +1131,39 @@ private fun InteractiveSticker(
 
     val sizeDp = 72.dp
     val sizePx = with(density) { sizeDp.toPx() }
-    val pxX = (item.x * canvasW) - sizePx / 2f
-    val pxY = (item.y * canvasH) - sizePx / 2f
+    val minTouchPx = with(density) { 48.dp.roundToPx() }
+    val hitSize = (sizePx * item.scale).roundToInt().coerceAtLeast(minTouchPx)
+    val pxX = (item.x * canvasW) - hitSize / 2f
+    val pxY = (item.y * canvasH) - hitSize / 2f
+    val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = Modifier
             .offset { IntOffset(pxX.roundToInt(), pxY.roundToInt()) }
-            .graphicsLayer {
-                scaleX = item.scale
-                scaleY = item.scale
-                rotationZ = item.rotationDeg
-                alpha = item.opacity
+            .layout { measurable, constraints ->
+                val unconstrained = constraints.copy(
+                    minWidth = 0,
+                    minHeight = 0,
+                    maxWidth = Constraints.Infinity,
+                    maxHeight = Constraints.Infinity,
+                )
+                val placeable = measurable.measure(unconstrained)
+                val outW = (placeable.width * item.scale).roundToInt().coerceAtLeast(minTouchPx)
+                val outH = (placeable.height * item.scale).roundToInt().coerceAtLeast(minTouchPx)
+                layout(outW, outH) {
+                    placeable.place(
+                        x = (outW - placeable.width) / 2,
+                        y = (outH - placeable.height) / 2,
+                    )
+                }
             }
             .then(
                 if (interactive) {
                     Modifier
-                        .clickable {
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                        ) {
                             currentOnSelect()
                             if (currentItem.kind == PosterStickerKind.TEKS) currentOnDoubleTap()
                         }
@@ -1112,8 +1181,8 @@ private fun InteractiveSticker(
                             detectTransformGestures { _, pan, zoom, rotation ->
                                 currentOnSelect()
                                 val latest = currentItem
-                                val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.05f, 0.95f)
-                                val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.05f, 0.95f)
+                                val nx = ((latest.x * canvasW + pan.x) / canvasW).coerceIn(0.03f, 0.97f)
+                                val ny = ((latest.y * canvasH + pan.y) / canvasH).coerceIn(0.03f, 0.97f)
                                 currentOnUpdate(
                                     latest.copy(
                                         x = nx,
@@ -1127,22 +1196,32 @@ private fun InteractiveSticker(
                 } else {
                     Modifier
                 },
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
-                } else {
-                    Modifier
-                },
             ),
     ) {
-        PosterStickerGraphic(
-            kind = item.kind,
-            size = sizeDp,
-            color = item.color,
-            text = item.text,
-            customImageUri = item.customImageUri,
-        )
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = item.scale
+                    scaleY = item.scale
+                    rotationZ = item.rotationDeg
+                    alpha = item.opacity
+                }
+                .then(
+                    if (isSelected) {
+                        Modifier.border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            PosterStickerGraphic(
+                kind = item.kind,
+                size = sizeDp,
+                color = item.color,
+                text = item.text,
+                customImageUri = item.customImageUri,
+            )
+        }
     }
 }
 
@@ -1296,7 +1375,12 @@ private fun CardsTabPanel(
         LabeledSlider("3D Putar Y", selectedCard.tiltY, -42f..42f) {
             onUpdateCard(selectedCard.copy(tiltY = it))
         }
-        LabeledSlider("Skala Kartu", selectedCard.scale, 0.5f..1.8f) {
+        LabeledSlider(
+            label = "Skala Kartu",
+            value = selectedCard.scale,
+            range = POSTER_CARD_MIN_SCALE..POSTER_CARD_MAX_SCALE,
+            valueText = "${(selectedCard.scale * 100f).roundToInt()}%",
+        ) {
             onUpdateCard(selectedCard.copy(scale = it))
         }
     }
@@ -1816,6 +1900,7 @@ private fun LabeledSlider(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
+    valueText: String? = null,
     onChange: (Float) -> Unit,
 ) {
     Row(
@@ -1839,6 +1924,15 @@ private fun LabeledSlider(
                 activeTrackColor = Color(0xFFFB5C74),
             ),
         )
+        if (valueText != null) {
+            Text(
+                text = valueText,
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(start = 6.dp),
+                maxLines = 1,
+            )
+        }
     }
 }
 

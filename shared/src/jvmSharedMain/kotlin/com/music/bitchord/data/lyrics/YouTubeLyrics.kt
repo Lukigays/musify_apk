@@ -15,16 +15,7 @@ object YouTubeMusicLyrics {
     suspend fun lyrics(videoId: String): List<LyricLine>? = withContext(Dispatchers.IO) {
         if (!YOUTUBE_ID.matches(videoId)) return@withContext null
         val next = runCatching { Innertube.next(videoId) }.getOrNull() ?: return@withContext null
-        val endpoint = next.objectsNamed("tabRenderer")
-            .firstOrNull { it.youtubeStrings().any { text -> text.equals("Lyrics", ignoreCase = true) } }
-            ?.objectsNamed("browseEndpoint")?.firstOrNull()
-            ?: next.objectsNamed("tabRenderer").drop(1).firstNotNullOfOrNull {
-                it.objectsNamed("browseEndpoint").firstOrNull()
-            }
-            ?: return@withContext null
-        val browseId = (endpoint["browseId"] as? JsonPrimitive)?.contentOrNull
-            ?: return@withContext null
-        val params = (endpoint["params"] as? JsonPrimitive)?.contentOrNull
+        val (browseId, params) = lyricsBrowseEndpoint(next) ?: return@withContext null
         // The web client is answered with the plain description shelf even
         // when the track has timed lyrics; only the mobile client gets the
         // timedLyricsModel. Ask as the phone first, then fall back to the
@@ -35,6 +26,31 @@ object YouTubeMusicLyrics {
         val web = runCatching { Innertube.browse(browseId, params) }.getOrNull()
         web?.let(::plainLyrics)
     }
+}
+
+/**
+ * Finds the lyrics tab's `(browseId, params)` from a `next` response regardless of UI
+ * language (e.g. Indonesian "Lirik", English "Lyrics", etc.) by preferring `MPLY*`
+ * browse ids before falling back to tab titles or position.
+ */
+internal fun lyricsBrowseEndpoint(next: JsonObject): Pair<String, String?>? {
+    val tabs = next.objectsNamed("tabRenderer").toList()
+    val endpoint = tabs.firstOrNull { tab ->
+        val browseId = (tab.objectsNamed("browseEndpoint").firstOrNull()
+            ?.get("browseId") as? JsonPrimitive)?.contentOrNull
+        browseId?.startsWith("MPLY") == true
+    }?.objectsNamed("browseEndpoint")?.firstOrNull()
+        ?: tabs.firstOrNull {
+            it.youtubeStrings().any { text -> text.equals("Lyrics", ignoreCase = true) }
+        }?.objectsNamed("browseEndpoint")?.firstOrNull()
+        ?: tabs.drop(1).firstNotNullOfOrNull {
+            it.objectsNamed("browseEndpoint").firstOrNull()
+        }
+        ?: return null
+    val browseId = (endpoint["browseId"] as? JsonPrimitive)?.contentOrNull
+        ?: return null
+    val params = (endpoint["params"] as? JsonPrimitive)?.contentOrNull
+    return browseId to params
 }
 
 /** YouTube Music's timed lyrics, where the track has them. */

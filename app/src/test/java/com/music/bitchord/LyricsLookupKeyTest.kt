@@ -24,4 +24,11 @@ class LyricsLookupKeyTest {
         assertNotEquals(key(), key(order = order.reversed()))
         assertNotEquals(key(), key(prioritize = true))
     }
+
+    @Test
+    fun `metadata arrival triggers a new lookup key for the same videoId`() {
+        val emptyMeta = lyricsLookupKey("abcdefghijk", sources, order, false, title = "", artist = "")
+        val filledMeta = lyricsLookupKey("abcdefghijk", sources, order, false, title = "Good Days", artist = "SZA")
+        assertNotEquals(emptyMeta, filledMeta)
+    }
 }

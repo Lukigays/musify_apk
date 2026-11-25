@@ -17,6 +17,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 
 /**
  * Where the player gets its lyrics.
@@ -164,7 +165,10 @@ object LyricsRepository {
             isrc = known.orEmpty(),
         )
 
-        resultCache[key]?.let { cached ->
+        val cached = synchronized(resultCache) {
+            resultCache[key] ?: resultCache.entries.firstOrNull { compatibleKey(it.key, key) }?.value
+        }
+        if (cached != null) {
             onPreliminaryResult?.invoke(cached)
             onSourceResult?.invoke(cached.source, cached)
             return cached
@@ -181,8 +185,26 @@ object LyricsRepository {
         var snapshotStarted: List<LyricsSource> = emptyList()
         var snapshotResults: Map<LyricsSource, Result?> = emptyMap()
         var snapshotPreliminary: Result? = null
+        var joinedRun: InFlightLookup? = null
+        var activeKey: LookupKey = key
 
-        val run = inFlight.compute(key) { _, existing ->
+        val compatibleActiveKey = inFlight.keys.firstOrNull { compatibleKey(it, key) }
+        if (compatibleActiveKey != null && compatibleActiveKey != key) {
+            inFlight.computeIfPresent(compatibleActiveKey) { _, existing ->
+                if (!existing.deferred.isCompleted) {
+                    existing.waiters.incrementAndGet()
+                    snapshotStarted = synchronized(existing.started) { existing.started.toList() }
+                    snapshotResults = existing.results.toMap()
+                    snapshotPreliminary = existing.latestPreliminary
+                    existing.listeners.add(callbackBundle)
+                    joinedRun = existing
+                    activeKey = compatibleActiveKey
+                }
+                existing
+            }
+        }
+
+        val run = joinedRun ?: inFlight.compute(key) { _, existing ->
             if (existing != null && !existing.deferred.isCompleted) {
                 existing.waiters.incrementAndGet()
                 snapshotStarted = synchronized(existing.started) { existing.started.toList() }
@@ -253,7 +275,7 @@ object LyricsRepository {
             run.deferred.await()
         } finally {
             run.listeners.remove(callbackBundle)
-            inFlight.computeIfPresent(key) { _, current ->
+            inFlight.computeIfPresent(activeKey) { _, current ->
                 if (current === run && current.waiters.decrementAndGet() <= 0 && !current.deferred.isCompleted) {
                     current.job.cancel()
                     null
@@ -262,6 +284,24 @@ object LyricsRepository {
                 }
             }
         }
+    }
+
+    internal fun compatibleDurationSeconds(aSeconds: Long, bSeconds: Long): Boolean =
+        aSeconds == bSeconds || (aSeconds > 0L && bSeconds > 0L && abs(aSeconds - bSeconds) <= 2L)
+
+    private fun compatibleKey(a: LookupKey, b: LookupKey): Boolean {
+        if (a == b) return true
+        if (a.videoId != b.videoId ||
+            a.title != b.title ||
+            a.artist != b.artist ||
+            a.album != b.album ||
+            a.sequence != b.sequence ||
+            a.prioritizeSyllableSync != b.prioritizeSyllableSync ||
+            a.isrc != b.isrc
+        ) {
+            return false
+        }
+        return compatibleDurationSeconds(a.durationSeconds, b.durationSeconds)
     }
 
     private suspend fun executeLookup(

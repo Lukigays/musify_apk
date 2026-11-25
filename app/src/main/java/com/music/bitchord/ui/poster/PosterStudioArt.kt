@@ -334,6 +334,23 @@ private fun resolvedBorderLineColor(lineColor: Color, subtleWhiteAlpha: Float): 
 private fun resolvedAccentLineColor(lineColor: Color, alpha: Float = 0.95f): Color =
     lineColor.copy(alpha = alpha)
 
+const val POSTER_CARD_BASE_WIDTH_DP = 176f
+const val POSTER_CARD_DEFAULT_SCALE = 0.78f
+const val POSTER_CARD_SECONDARY_SCALE = 0.64f
+const val POSTER_CARD_MIN_SCALE = 0.20f
+const val POSTER_CARD_MAX_SCALE = 2.00f
+private const val POSTER_CARD_REFERENCE_CANVAS_DP = 320f
+
+fun posterCardViewportScale(canvasWidthDp: Float, canvasHeightDp: Float): Float {
+    if (canvasWidthDp <= 0f || canvasHeightDp <= 0f) return 1f
+    val minDim = min(canvasWidthDp, canvasHeightDp)
+    return (minDim / POSTER_CARD_REFERENCE_CANVAS_DP).coerceIn(0.68f, 1.15f)
+}
+
+fun posterCardEffectiveScale(userScale: Float, viewportScale: Float): Float =
+    (userScale.coerceIn(POSTER_CARD_MIN_SCALE, POSTER_CARD_MAX_SCALE) * viewportScale)
+        .coerceIn(0.14f, 2.40f)
+
 @Composable
 fun PosterSongCard(
     song: Song,
@@ -343,7 +360,7 @@ fun PosterSongCard(
     showControls: Boolean,
     showHeart: Boolean,
     lines: List<String>,
-    cardWidth: Dp = 192.dp,
+    cardWidth: Dp = POSTER_CARD_BASE_WIDTH_DP.dp,
     lineColor: Color = Color.White,
     lineWidthDp: Float = 1.4f,
     tiltX: Float = 0f,
@@ -803,7 +820,7 @@ private fun AppleLyricCard(
     ) {
         Column(
             modifier = Modifier
-                .width(width + 20.dp)
+                .width(width + 16.dp)
                 .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.90f), darkTint)))
                 .border(lineWidthDp.dp, borderCol, shape)
                 .padding(14.dp),
@@ -974,7 +991,7 @@ private fun CassetteCard(
     ) {
         Column(
             modifier = Modifier
-                .width(width + 16.dp)
+                .width(width + 12.dp)
                 .background(Color(0xEE161922))
                 .border(lineWidthDp.dp, borderCol, shape)
                 .padding(10.dp),

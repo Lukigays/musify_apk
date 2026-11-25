@@ -1246,8 +1246,8 @@ private fun BitChordApp(
     val lyricsSourceOrder by AppSettings.lyricsSourceOrder.collectAsStateWithLifecycle()
     val prioritizeSyllableSync by AppSettings.prioritizeSyllableSync.collectAsStateWithLifecycle()
     LaunchedEffect(
-        player.song?.videoId, player.durationMs, syncedLyricsEnabled, lyricsSources,
-        lyricsSourceOrder, prioritizeSyllableSync,
+        player.song?.videoId, player.song?.title, player.song?.artist, player.song?.albumName,
+        player.durationMs, syncedLyricsEnabled, lyricsSources, lyricsSourceOrder, prioritizeSyllableSync,
     ) {
         player.song?.let {
             viewModel.loadLyrics(

@@ -11,6 +11,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 /**
@@ -29,6 +30,13 @@ object LrcLib {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private val client by lazy {
+        Http.client.newBuilder()
+            .callTimeout(8, TimeUnit.SECONDS)
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .build()
+    }
+
     /** Synced lyrics for a track, or null when nothing usable is published. */
     suspend fun lyrics(title: String, artist: String, durationMs: Long): List<LyricLine>? =
         withContext(Dispatchers.IO) {
@@ -37,8 +45,16 @@ object LrcLib {
             val seconds = (durationMs / 1000).toInt()
 
             val exact = runCatching { exactMatch(cleanTitle, cleanArtist, seconds) }.getOrNull()
-            val synced = exact ?: runCatching { bestSearchHit(cleanTitle, cleanArtist, seconds) }
+            var synced = exact ?: runCatching { bestSearchHit(cleanTitle, cleanArtist, seconds) }
                 .getOrNull()
+            if (synced == null) {
+                val altTitle = title.forLyricsSearch()
+                val altArtist = artist.artistForLyricsSearch()
+                if (altTitle != cleanTitle || altArtist != cleanArtist) {
+                    synced = runCatching { exactMatch(altTitle, altArtist, seconds) }.getOrNull()
+                        ?: runCatching { bestSearchHit(altTitle, altArtist, seconds) }.getOrNull()
+                }
+            }
             synced?.let(::parseLrc)?.takeIf { it.isNotEmpty() }
         }
 
@@ -75,7 +91,7 @@ object LrcLib {
 
     private fun get(url: String): String? {
         val request = Request.Builder().url(url).header("User-Agent", AGENT).build()
-        Http.client.newCall(request).execute().use { response ->
+        client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return null
             return response.body?.string()
         }

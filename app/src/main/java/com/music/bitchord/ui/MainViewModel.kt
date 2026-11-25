@@ -367,6 +367,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var currentLyricsRequest: LyricsRequest? = null
     private var lyricsGeneration = 0L
     private var selectedLyricsSource: LyricsSource? = null
+    private var pendingLyricsVideoId: String? = null
 
     /**
      * What the loaded lyrics are for. Both the track *and* the settings that
@@ -401,6 +402,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         val key = lyricsLookupKey(
             videoId, sources, AppSettings.lyricsSourceOrder.value, AppSettings.prioritizeSyllableSync.value,
+            title = title, artist = artist, album = album,
         )
         if (lyricsFor == key) return
         // The duration lands a beat after the track, and a database match needs
@@ -410,7 +412,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // dropped as a duplicate, and leave the track marked as being looked up
         // by nobody — which is what left a paused track loading for ever, since
         // pausing is when the duration is most likely to arrive a frame late.
-        if (localUri == null && durationMs <= 0L) return
+        if (localUri == null && durationMs <= 0L) {
+            if (pendingLyricsVideoId != videoId) {
+                pendingLyricsVideoId = videoId
+                lyricsFor = null
+                lyricsGeneration += 1
+                currentLyricsRequest = null
+                selectedLyricsSource = null
+                manualLyricsJobs.values.forEach(Job::cancel)
+                manualLyricsJobs.clear()
+                lyricsProviderResults.clear()
+                _lyricsProviderStates.value =
+                    LyricsSource.entries.associateWith { LyricsProviderState.NOT_FETCHED }
+                _lyrics.value = null
+                _lyricsSource.value = null
+                lyricsJob?.cancel()
+                _lyricsChecked.value = false
+            }
+            return
+        }
+        pendingLyricsVideoId = videoId
         lyricsFor = key
         lyricsGeneration += 1
         val generation = lyricsGeneration
@@ -500,7 +521,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Selects a provider from the player drawer. Completed hits are applied
-     * from memory; misses are inert; only an untouched provider goes online.
+     * from memory; untouched or previously missed providers go online on demand.
      */
     fun selectLyricsProvider(source: LyricsSource) {
         val request = currentLyricsRequest ?: return
@@ -513,11 +534,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 // Apply it as soon as the already-running automatic attempt completes.
                 selectedLyricsSource = source
             }
-            LyricsProviderState.NOT_FETCHED, null -> {
+            LyricsProviderState.NOT_FETCHED, LyricsProviderState.NOT_FOUND, null -> {
                 selectedLyricsSource = source
                 fetchLyricsProvider(request, lyricsGeneration, source)
             }
-            LyricsProviderState.NOT_FOUND -> Unit
         }
     }
 
@@ -3836,4 +3856,15 @@ internal fun lyricsLookupKey(
     sources: Set<LyricsSource>,
     order: List<LyricsSource>,
     prioritizeSyllableSync: Boolean,
-): List<Any> = listOf(videoId, sources, order, prioritizeSyllableSync)
+    title: String = "",
+    artist: String = "",
+    album: String? = null,
+): List<Any> = listOf(
+    videoId,
+    sources,
+    order,
+    prioritizeSyllableSync,
+    title.trim(),
+    artist.trim(),
+    album.orEmpty().trim(),
+)

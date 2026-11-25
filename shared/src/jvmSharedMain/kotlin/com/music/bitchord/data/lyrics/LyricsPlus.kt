@@ -38,7 +38,7 @@ object LyricsPlus {
     )
 
     private const val SECONDARY_START_DELAY_MS = 700L
-    private const val SECONDARY_TIMEOUT_MS = 2_200L
+    private const val SECONDARY_TIMEOUT_MS = 4_000L
     private const val PREFERRED_SOURCES = "apple,lyricsplus,musixmatch,qq"
 
     private val lastGood = AtomicReference<String?>(null)

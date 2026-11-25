@@ -43,17 +43,36 @@ object BetterLyrics {
         durationMs: Long,
         album: String?,
     ): List<LyricLine>? = withContext(Dispatchers.IO) {
-        val url = endpoint.toHttpUrl().newBuilder()
-            .addQueryParameter("s", title)
-            .addQueryParameter("a", artist)
-            .apply {
-                val seconds = durationMs / 1000
-                if (seconds > 0) addQueryParameter("d", seconds.toString())
-                if (!album.isNullOrBlank()) addQueryParameter("al", album)
-            }
-            .build()
+        fetchWithFallback(endpoint, title, artist, durationMs, album, ::lyricsGet)
+    }
 
-        val body = lyricsGet(url.toString()) ?: return@withContext null
-        ProviderLyrics.parse(body)
+    internal fun fetchWithFallback(
+        endpoint: String,
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String?,
+        get: (String) -> String?,
+    ): List<LyricLine>? {
+        fun query(withAlbum: String?): List<LyricLine>? {
+            val url = endpoint.toHttpUrl().newBuilder()
+                .addQueryParameter("s", title)
+                .addQueryParameter("a", artist)
+                .apply {
+                    val seconds = durationMs / 1000
+                    if (seconds > 0) addQueryParameter("d", seconds.toString())
+                    if (!withAlbum.isNullOrBlank()) addQueryParameter("al", withAlbum)
+                }
+                .build()
+
+            val body = get(url.toString()) ?: return null
+            return ProviderLyrics.parse(body)
+        }
+
+        // BetterLyrics rejects requests (HTTP 401/404) when YouTube Music's album
+        // edition label differs slightly from Apple's catalogue name (e.g.
+        // "SOS (LANA)" vs "SOS"). Retry without the album constraint before giving up.
+        return query(album)
+            ?: if (!album.isNullOrBlank()) query(null) else null
     }
 }

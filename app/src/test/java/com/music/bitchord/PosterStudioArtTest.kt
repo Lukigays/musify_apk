@@ -3,6 +3,10 @@ package com.music.bitchord
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.music.bitchord.ui.poster.DepthStroke
+import com.music.bitchord.ui.poster.POSTER_CARD_BASE_WIDTH_DP
+import com.music.bitchord.ui.poster.POSTER_CARD_DEFAULT_SCALE
+import com.music.bitchord.ui.poster.POSTER_CARD_MAX_SCALE
+import com.music.bitchord.ui.poster.POSTER_CARD_MIN_SCALE
 import com.music.bitchord.ui.poster.POSTER_LINE_PALETTE
 import com.music.bitchord.ui.poster.POSTER_TINT_PALETTE
 import com.music.bitchord.ui.poster.Poster3dPreset
@@ -15,6 +19,8 @@ import com.music.bitchord.ui.poster.PosterStickerKind
 import com.music.bitchord.ui.poster.composeColorToHex
 import com.music.bitchord.ui.poster.composeColorToHsv
 import com.music.bitchord.ui.poster.hsvToComposeColor
+import com.music.bitchord.ui.poster.posterCardEffectiveScale
+import com.music.bitchord.ui.poster.posterCardViewportScale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -79,5 +85,23 @@ class PosterStudioArtTest {
         val rebuilt = hsvToComposeColor(hsv[0], hsv[1], hsv[2])
         assertEquals(composeColorToHex(cyan), composeColorToHex(rebuilt))
         assertEquals("#FFFFFF", composeColorToHex(Color.White))
+    }
+
+    @Test
+    fun `poster card sizing scales proportionally and supports tiny shrink range`() {
+        assertTrue(POSTER_CARD_BASE_WIDTH_DP < 192f)
+        assertTrue(POSTER_CARD_DEFAULT_SCALE < 1f)
+        assertTrue(POSTER_CARD_MIN_SCALE <= 0.20f)
+        assertTrue(POSTER_CARD_MAX_SCALE >= 2.00f)
+
+        val phoneStageScale = posterCardViewportScale(240f, 426f)
+        val tabletStageScale = posterCardViewportScale(480f, 480f)
+        assertTrue(phoneStageScale < tabletStageScale)
+        assertTrue(phoneStageScale in 0.68f..0.85f)
+
+        val minRendered = posterCardEffectiveScale(POSTER_CARD_MIN_SCALE, phoneStageScale)
+        val defaultRendered = posterCardEffectiveScale(POSTER_CARD_DEFAULT_SCALE, phoneStageScale)
+        assertTrue(minRendered < 0.25f)
+        assertTrue(defaultRendered in 0.50f..0.75f)
     }
 }

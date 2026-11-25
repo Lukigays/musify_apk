@@ -104,7 +104,9 @@ private fun LyricsProviderRow(
     val haptics = rememberHaptics()
     // A running automatic request can still be selected: it is marked as the
     // requested source and applied when that same in-flight call completes.
-    val enabled = !current && state != LyricsProviderState.NOT_FOUND
+    // A previous miss (for instance a transient timeout during startup) can also
+    // be tapped to retry directly.
+    val enabled = !current
     val status = when {
         current -> stringResource(Res.string.lyrics_provider_current)
         state == LyricsProviderState.FOUND -> stringResource(Res.string.lyrics_provider_found)
