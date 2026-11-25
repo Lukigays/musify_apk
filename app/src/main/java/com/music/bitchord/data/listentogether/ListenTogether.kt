@@ -10,6 +10,7 @@ import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.DebugLog as Log
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.sources.TrackMatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -910,7 +911,7 @@ object ListenTogether {
     }
 
     fun proposeVoteTrack(song: Song) {
-        val durationMs = song.durationSeconds?.let { it * 1000L }
+        val durationMs = TrackMatcher.secondsOf(song.durationText)?.let { it * 1000L }
         proposeVotePartyTrack(
             PartyTrack(
                 videoId = song.videoId,
@@ -1462,7 +1463,7 @@ object ListenTogether {
                 }
                 "next", "previous" -> {
                     if (q.items.isEmpty()) return
-                    val curIdx = partyQueueIndexOf(q, pb.track)
+                    val curIdx = partyQueueIndexOf(q, pb, pb.track?.videoId)
                     val nextIdx = if (cmd.action == "next") {
                         (curIdx + 1).coerceAtMost(q.items.lastIndex)
                     } else {
@@ -1510,7 +1511,7 @@ object ListenTogether {
                     val existingIds = items.mapTo(HashSet()) { it.videoId }
                     val addable = cmd.tracks.filter { it.videoId !in existingIds }
                     if (addable.isEmpty()) return
-                    val curIdx = partyQueueIndexOf(q, pb.track)
+                    val curIdx = partyQueueIndexOf(q, pb, pb.track?.videoId)
                     if (cmd.playNext && curIdx in items.indices) {
                         items.addAll(curIdx + 1, addable)
                     } else {
@@ -1525,7 +1526,7 @@ object ListenTogether {
                     val vid = cmd.videoId ?: return
                     val items = q.items.filterNot { it.videoId == vid }
                     val qSeq = q.seq + 1L
-                    val idx = partyQueueIndexOf(q.copy(items = items), pb.track)
+                    val idx = partyQueueIndexOf(q.copy(items = items), pb, pb.track?.videoId)
                     newQ = PartyQueue(seq = qSeq, index = idx, items = items)
                     newPb = pb.copy(seq = nextSeq, queueSeq = qSeq, queueLength = items.size, queueIndex = idx, updatedBy = cmd.senderName, updatedAtMs = now)
                 }
@@ -1543,7 +1544,7 @@ object ListenTogether {
                     val moved = items.removeAt(cmd.fromIndex)
                     items.add(cmd.toIndex, moved)
                     val qSeq = q.seq + 1L
-                    val idx = partyQueueIndexOf(q.copy(items = items), pb.track)
+                    val idx = partyQueueIndexOf(q.copy(items = items), pb, pb.track?.videoId)
                     newQ = PartyQueue(seq = qSeq, index = idx, items = items)
                     newPb = pb.copy(seq = nextSeq, queueSeq = qSeq, queueLength = items.size, queueIndex = idx, updatedBy = cmd.senderName, updatedAtMs = now)
                 }
