@@ -2,7 +2,9 @@ package com.music.bitchord.auth
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.view.View
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,13 +20,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.music.bitchord.data.DebugLog as Log
 import com.music.bitchord.data.web.QuietWebChromeClient
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import java.util.Locale
 import kotlin.coroutines.resume
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val MUSIC_ORIGIN = "https://music.youtube.com"
 
@@ -35,15 +38,47 @@ private const val LOGIN_URL =
 
 private const val TAG = "Musify"
 
+/** Max wait for Chromium CookieManager to flush Set-Cookie after reaching music.youtube.com. */
+private const val COOKIE_SETTLE_POLLS = 80
+private const val COOKIE_SETTLE_STEP_MS = 100L
+
+internal fun isMusicYouTubeUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lower = url.lowercase(Locale.ROOT)
+    return lower == MUSIC_ORIGIN ||
+        lower.startsWith("$MUSIC_ORIGIN/") ||
+        lower.startsWith("$MUSIC_ORIGIN?")
+}
+
+internal fun isGoogleSignInHost(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lower = url.lowercase(Locale.ROOT)
+    return lower.startsWith("https://accounts.google.com") ||
+        lower.startsWith("https://accounts.youtube.com") ||
+        lower.startsWith("https://consent.youtube.com")
+}
+
+internal fun extractAuthUserQueryParam(url: String?): String? {
+    if (url.isNullOrBlank()) return null
+    val query = url.substringAfter('?', "").substringBefore('#')
+    if (query.isEmpty()) return null
+    return query.split('&').firstNotNullOfOrNull { param ->
+        val key = param.substringBefore('=')
+        if (key == "authuser") {
+            param.substringAfter('=', "").takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+    }
+}
+
 /**
  * In-app Google sign-in for YouTube Music, and channel switcher.
  *
  * In [WebSessionMode.SIGN_IN], as soon as Google redirects back onto
- * `music.youtube.com` with valid auth cookies (`AuthStore.hasApiSid`), this
- * automatically covers the web homepage and polls `ytcfg.LOGGED_IN` so login
- * completes immediately without stopping on the YouTube Music web homepage.
- * If an extra multi-brand-account prompt needs manual confirmation after ~4s,
- * it gracefully reveals the page and lets the user confirm manually.
+ * `music.youtube.com`, the WebView is immediately covered, stopped, and its
+ * signed-in cookies are captured straight away so the user is never dropped
+ * onto the YouTube Music web homepage or asked to click "Use this profile".
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -68,7 +103,8 @@ fun YtMusicLoginScreen(
     configureWebView: (WebView) -> Unit = {},
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
-    var autoCaptureActive by remember(mode) { mutableStateOf(false) }
+    var waitingForMusicCookies by remember(mode) { mutableStateOf(false) }
+    var lastMusicUrl by remember(mode) { mutableStateOf<String?>(null) }
     var captureDelivered by remember(mode) { mutableStateOf(false) }
 
     val currentOnCaptured by rememberUpdatedState(onCaptured)
@@ -76,99 +112,142 @@ fun YtMusicLoginScreen(
     val currentOnPageReady by rememberUpdatedState(onPageReady)
     val currentOnAutoCompleting by rememberUpdatedState(onAutoCompleting)
 
+    fun deliverSignInCookiesIfReady(view: WebView, url: String?): Boolean {
+        if (mode != WebSessionMode.SIGN_IN) return false
+        if (captureDelivered) return true
+        val cookies = CookieManager.getInstance().getCookie(MUSIC_ORIGIN)
+        if (cookies == null || !AuthStore.hasApiSid(cookies)) return false
+        captureDelivered = true
+        waitingForMusicCookies = false
+        currentOnAutoCompleting(true)
+        view.stopLoading()
+        view.visibility = View.GONE
+        CookieManager.getInstance().flush()
+        currentOnCaptured(
+            CapturedSession(
+                cookie = cookies,
+                pageId = null,
+                dataSyncId = null,
+                authUser = extractAuthUserQueryParam(url ?: lastMusicUrl),
+                visitorData = null,
+                clientVersion = null,
+                loggedIn = true,
+            ),
+        )
+        return true
+    }
+
     LaunchedEffect(captureRequest) {
         if (captureRequest == 0 || captureDelivered) return@LaunchedEffect
         val view = webView
         if (view == null) {
             currentOnUnavailable()
+            return@LaunchedEffect
+        }
+        if (mode == WebSessionMode.SIGN_IN && deliverSignInCookiesIfReady(view, view.url)) {
+            return@LaunchedEffect
+        }
+        val session = probeCapture(view)
+        if (session != null) {
+            captureDelivered = true
+            currentOnCaptured(session)
         } else {
-            val session = probeCapture(view)
-            if (session != null) {
-                captureDelivered = true
-                currentOnCaptured(session)
-            } else {
-                currentOnUnavailable()
-            }
+            currentOnUnavailable()
         }
     }
 
-    LaunchedEffect(autoCaptureActive, mode) {
-        if (!autoCaptureActive || mode != WebSessionMode.SIGN_IN || captureDelivered) return@LaunchedEffect
-        val view = webView ?: run {
-            autoCaptureActive = false
-            currentOnAutoCompleting(false)
+    LaunchedEffect(waitingForMusicCookies, mode) {
+        if (!waitingForMusicCookies || mode != WebSessionMode.SIGN_IN || captureDelivered) {
             return@LaunchedEffect
         }
-        repeat(16) {
-            if (captureDelivered) return@LaunchedEffect
-            val session = probeCapture(view)
-            if (session != null) {
-                captureDelivered = true
-                currentOnCaptured(session)
+        repeat(COOKIE_SETTLE_POLLS) {
+            if (captureDelivered || !waitingForMusicCookies) return@LaunchedEffect
+            val view = webView
+            if (view != null && deliverSignInCookiesIfReady(view, lastMusicUrl ?: view.url)) {
                 return@LaunchedEffect
             }
-            delay(250)
+            delay(COOKIE_SETTLE_STEP_MS)
         }
-        // Fallback: if an intermediate prompt stayed open after 4s, let user finish manually.
-        autoCaptureActive = false
+        waitingForMusicCookies = false
+        webView?.stopLoading()
         currentOnAutoCompleting(false)
+        currentOnCaptureUnavailable()
     }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
             if (mode == WebSessionMode.SIGN_IN) {
                 BrowserSession.clearGoogleCookies()
-            } else initialCookie?.let(BrowserSession::installGoogleCookies)
+            } else {
+                initialCookie?.let(BrowserSession::installGoogleCookies)
+            }
             WebView(context).apply {
                 if (mode == WebSessionMode.SIGN_IN) {
-                    clearCache(true)
                     clearHistory()
                     clearFormData()
                 }
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.userAgentString = browserUserAgent(settings.userAgentString)
+                cookieManager.setAcceptThirdPartyCookies(this, true)
                 webChromeClient = QuietWebChromeClient()
                 configureWebView(this)
 
-                fun maybeTriggerAutoCapture(url: String?) {
-                    val onMusicOrigin = url?.startsWith(MUSIC_ORIGIN) == true
-                    currentOnPageReady(onMusicOrigin)
-                    if (!onMusicOrigin || mode != WebSessionMode.SIGN_IN || captureDelivered || autoCaptureActive) {
+                fun handleNavigation(view: WebView?, url: String?) {
+                    val onMusicOrigin = isMusicYouTubeUrl(url)
+                    if (mode == WebSessionMode.SWITCH_CHANNEL) {
+                        currentOnPageReady(onMusicOrigin)
                         return
                     }
-                    val cookies = CookieManager.getInstance().getCookie(MUSIC_ORIGIN)
-                    if (cookies != null && AuthStore.hasApiSid(cookies)) {
-                        autoCaptureActive = true
+                    if (captureDelivered) return
+                    if (onMusicOrigin) {
+                        lastMusicUrl = url
                         currentOnAutoCompleting(true)
+                        if (view != null && deliverSignInCookiesIfReady(view, url)) {
+                            return
+                        }
+                        view?.visibility = View.INVISIBLE
+                        waitingForMusicCookies = true
+                    } else if (isGoogleSignInHost(url) && waitingForMusicCookies) {
+                        waitingForMusicCookies = false
+                        currentOnAutoCompleting(false)
+                        view?.visibility = View.VISIBLE
                     }
                 }
 
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(
                         view: WebView?,
-                        request: android.webkit.WebResourceRequest?,
+                        request: WebResourceRequest?,
                     ): Boolean {
-                        maybeTriggerAutoCapture(request?.url?.toString())
-                        return false
+                        val url = request?.url?.toString()
+                        handleNavigation(view, url)
+                        return mode == WebSessionMode.SIGN_IN && captureDelivered
                     }
 
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                        maybeTriggerAutoCapture(url)
+                        handleNavigation(view, url)
                     }
 
                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                        maybeTriggerAutoCapture(url)
+                        handleNavigation(view, url)
                     }
 
                     override fun onPageFinished(view: WebView?, url: String?) {
-                        maybeTriggerAutoCapture(url)
+                        handleNavigation(view, url)
                     }
                 }
 
                 webView = this
                 loadUrl(if (mode == WebSessionMode.SIGN_IN) LOGIN_URL else "$MUSIC_ORIGIN/")
             }
+        },
+        onRelease = { view ->
+            view.stopLoading()
+            view.destroy()
         },
     )
 }

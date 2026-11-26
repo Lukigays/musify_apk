@@ -242,7 +242,26 @@ object Innertube {
         val pageId: String?,
         val authUser: String,
         val clientVersion: String?,
+        val loggedIn: Boolean = false,
     )
+
+    data class ResolvedSessionScope(
+        val pageId: String?,
+        val dataSyncId: String?,
+        val authUser: String,
+        val clientVersion: String?,
+        val loggedIn: Boolean,
+    )
+
+    fun currentResolvedScope(): ResolvedSessionScope? = scope?.let {
+        ResolvedSessionScope(
+            pageId = it.pageId,
+            dataSyncId = it.dataSyncId,
+            authUser = it.authUser,
+            clientVersion = it.clientVersion,
+            loggedIn = it.loggedIn,
+        )
+    }
 
     @Volatile
     private var scope: SessionScope? = null
@@ -329,6 +348,7 @@ object Innertube {
             pageId = pageId?.takeIf { it.isNotBlank() },
             authUser = authUser?.takeIf { it.isNotBlank() } ?: "0",
             clientVersion = version,
+            loggedIn = true,
         )
         // The page's own visitor id, bound to this session — strictly better
         // than the anonymous one [fetchVisitorData] mints. See [visitorData].
@@ -377,12 +397,12 @@ object Innertube {
      * behaves exactly as it did before. What it must never do is invent a
      * [SessionScope.dataSyncId] — see that field.
      */
-    suspend fun ensureSessionScope() {
+    suspend fun ensureSessionScope(authUserHint: String? = null) {
         val session = cookie ?: return
         if (scope != null) return
         scopeLock.withLock {
             if (scope != null || cookie != session) return
-            runCatching { fetchSessionScope(session) }
+            runCatching { fetchSessionScope(session, authUserHint) }
                 .onFailure { Log.w(TAG, "could not read the session scope: ${it.message}") }
                 .getOrNull()
                 ?.let { fresh ->
@@ -426,11 +446,18 @@ object Innertube {
      * values wanted are flat strings in it. A key that moves reads as absent,
      * which is the same as not having asked.
      */
-    private suspend fun fetchSessionScope(session: String): SessionScope? {
+    private suspend fun fetchSessionScope(session: String, authUserHint: String? = null): SessionScope? {
+        val hintAuthUser = authUserHint?.takeIf { it.isNotBlank() }
         val html = client.get("$MUSIC_ORIGIN/") {
+            timeout {
+                requestTimeoutMillis = 8_000
+                socketTimeoutMillis = 7_000
+            }
+            hintAuthUser?.takeIf { it != "0" }?.let { parameter("authuser", it) }
             header("User-Agent", WEB_USER_AGENT)
             header("Accept-Language", acceptLanguageHeader)
             header("Cookie", session)
+            hintAuthUser?.let { header("X-Goog-AuthUser", it) }
             sapisidFrom(session)?.let { header("Authorization", sapisidHash(it)) }
         }.bodyAsText()
 
@@ -443,7 +470,9 @@ object Innertube {
         if (!signedIn) {
             Log.w(TAG, "music.youtube.com served a signed-out shell; not scoping requests")
             // Still worth the client version — that part is true either way.
-            return clientVersion?.let { SessionScope(null, null, "0", it) }
+            return clientVersion?.let {
+                SessionScope(null, null, hintAuthUser ?: "0", it, loggedIn = false)
+            }
         }
 
         val pageId = CONFIG_PAGE_ID.find(html)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
@@ -464,7 +493,13 @@ object Innertube {
                 visitorDataIsSessionBound = true
             }
 
-        return SessionScope(dataSyncId, pageId, authUser ?: "0", clientVersion)
+        return SessionScope(
+            dataSyncId = dataSyncId,
+            pageId = pageId,
+            authUser = authUser ?: hintAuthUser ?: "0",
+            clientVersion = clientVersion,
+            loggedIn = true,
+        )
     }
 
     private val CONFIG_LOGGED_IN = Regex(""""LOGGED_IN"\s*:\s*(true|false)""")
@@ -592,7 +627,8 @@ object Innertube {
     }
 
     /** Signed-in profile: display name, email/handle and avatar. */
-    suspend fun accountMenu(): JsonObject = postMusic("account/account_menu") {}
+    suspend fun accountMenu(timeoutMs: Long? = null): JsonObject =
+        postMusic("account/account_menu", timeoutMs = timeoutMs) {}
 
     /**
      * Every channel this session can act as, as Innertube's account switcher
@@ -1205,6 +1241,7 @@ object Innertube {
         region: String? = currentRegion,
         /** The `hl` to ask in; the app's own language when null. */
         language: String? = null,
+        timeoutMs: Long? = null,
         bodyExtras: JsonObjectBuilder.() -> Unit,
     ): JsonObject {
         val hl = language ?: currentLanguage
@@ -1215,8 +1252,14 @@ object Innertube {
         if (cookie != null) ensureSessionScope()
         val session = scope
         val clientVersion = webRemixVersion
-        val response = withRetry {
+        val response = withRetry(attempts = if (timeoutMs != null) 2 else 3) {
             client.post("$MUSIC_BASE/$endpoint") {
+                timeoutMs?.let { ms ->
+                    timeout {
+                        requestTimeoutMillis = ms
+                        socketTimeoutMillis = ms
+                    }
+                }
                 contentType(ContentType.Application.Json)
                 parameter("prettyPrint", "false")
                 parameter("hl", hl)

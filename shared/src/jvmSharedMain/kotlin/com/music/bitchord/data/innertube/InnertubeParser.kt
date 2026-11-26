@@ -1241,10 +1241,12 @@ object InnertubeParser {
         val header = collectRenderers(response, "activeAccountHeaderRenderer").firstOrNull()
             ?: return null
         val name = header.o("accountName").runs()
+            .ifBlank { header.o("accountName").s("simpleText").orEmpty() }
         if (name.isBlank()) return null
         val email = header.o("email").runs()
             .ifBlank { header.o("email").s("simpleText").orEmpty() }
             .ifBlank { header.o("channelHandle").runs() }
+            .ifBlank { header.o("channelHandle").s("simpleText").orEmpty() }
         return Account(
             name = name,
             email = email,

@@ -543,8 +543,8 @@ object YtMusicRepository {
     }
 
     /** Signed-in profile for the settings header. Null when signed out. */
-    suspend fun account(): Result<Account> = call("account") {
-        InnertubeParser.parseAccount(Innertube.accountMenu())
+    suspend fun account(timeoutMs: Long? = null): Result<Account> = call("account") {
+        InnertubeParser.parseAccount(Innertube.accountMenu(timeoutMs = timeoutMs))
             ?: error("No account details")
     }
 

@@ -1,7 +1,14 @@
 package com.music.bitchord
 
 import com.music.bitchord.auth.AuthStore
+import com.music.bitchord.auth.extractAuthUserQueryParam
+import com.music.bitchord.auth.isGoogleSignInHost
+import com.music.bitchord.auth.isMusicYouTubeUrl
+import com.music.bitchord.data.innertube.InnertubeParser
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,5 +69,60 @@ class AuthCookieTest {
         assertFalse(AuthStore.hasApiSid("APISID=secret"))
         assertFalse(AuthStore.hasApiSid("NOT-SAPISID=secret"))
         assertFalse(AuthStore.hasApiSid("PREF=tz=SAPISID"))
+    }
+
+    @Test
+    fun `music youtube url matching requires exact origin`() {
+        assertTrue(isMusicYouTubeUrl("https://music.youtube.com"))
+        assertTrue(isMusicYouTubeUrl("https://music.youtube.com/"))
+        assertTrue(isMusicYouTubeUrl("https://music.youtube.com/?authuser=1"))
+        assertFalse(isMusicYouTubeUrl("https://music.youtube.com.evil.com/"))
+        assertFalse(isMusicYouTubeUrl("https://accounts.google.com/ServiceLogin?continue=https://music.youtube.com/"))
+        assertFalse(isMusicYouTubeUrl(null))
+    }
+
+    @Test
+    fun `google sign in hosts match auth redirects`() {
+        assertTrue(isGoogleSignInHost("https://accounts.google.com/v3/signin/identifier"))
+        assertTrue(isGoogleSignInHost("https://accounts.youtube.com/accounts/SetSID"))
+        assertTrue(isGoogleSignInHost("https://consent.youtube.com/m?continue=https://music.youtube.com/"))
+        assertFalse(isGoogleSignInHost("https://music.youtube.com/"))
+    }
+
+    @Test
+    fun `authuser query parameter extracts cleanly`() {
+        assertEquals("1", extractAuthUserQueryParam("https://music.youtube.com/?hl=id&authuser=1#frag"))
+        assertEquals("0", extractAuthUserQueryParam("https://music.youtube.com?authuser=0"))
+        assertNull(extractAuthUserQueryParam("https://music.youtube.com/"))
+        assertNull(extractAuthUserQueryParam("https://music.youtube.com/?authuser="))
+    }
+
+    @Test
+    fun `parseAccount handles simpleText and runs`() {
+        val json = Json.parseToJsonElement(
+            """
+            {
+              "actions": [{
+                "openPopupAction": {
+                  "popup": {
+                    "multiPageMenuRenderer": {
+                      "header": {
+                        "activeAccountHeaderRenderer": {
+                          "accountName": {"simpleText": "LUKYY"},
+                          "channelHandle": {"simpleText": "@lukyy"},
+                          "accountPhoto": {"thumbnails": [{"url": "https://img/a.jpg", "width": 88}]}
+                        }
+                      }
+                    }
+                  }
+                }
+              }]
+            }
+            """.trimIndent(),
+        )
+        val account = InnertubeParser.parseAccount(json)
+        assertEquals("LUKYY", account?.name)
+        assertEquals("@lukyy", account?.email)
+        assertEquals("https://img/a.jpg", account?.thumbnailUrl)
     }
 }

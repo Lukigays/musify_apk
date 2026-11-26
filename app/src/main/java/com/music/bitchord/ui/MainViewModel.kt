@@ -3621,7 +3621,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         mode: WebSessionMode,
         onComplete: (Boolean) -> Unit = {},
     ) {
-        if (!session.loggedIn) {
+        if (!session.loggedIn || !com.music.bitchord.auth.AuthStore.hasApiSid(session.cookie)) {
             onComplete(false)
             return
         }
@@ -3633,29 +3633,63 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // signedIn=true; a half-finished channel chooser therefore became
             // a durable broken "Personal" account.
             Innertube.cookie = session.cookie
-            Innertube.adoptSessionScope(
-                pageId = session.pageId,
-                dataSyncId = session.dataSyncId,
-                authUser = session.authUser,
-                visitorData = session.visitorData,
-                clientVersion = session.clientVersion,
-                loggedIn = true,
-            )
-            Innertube.selectChannel(session.pageId, session.dataSyncId, session.authUser)
+            val hasExplicitPageScope =
+                session.dataSyncId != null || session.pageId != null || session.clientVersion != null
+            if (hasExplicitPageScope) {
+                Innertube.adoptSessionScope(
+                    pageId = session.pageId,
+                    dataSyncId = session.dataSyncId,
+                    authUser = session.authUser,
+                    visitorData = session.visitorData,
+                    clientVersion = session.clientVersion,
+                    loggedIn = true,
+                )
+                Innertube.selectChannel(session.pageId, session.dataSyncId, session.authUser)
+            } else {
+                // Fast SIGN_IN (or TV pairing) skips rendering the heavy web homepage;
+                // resolve session scope cleanly from the lightweight HTML shell once.
+                Innertube.ensureSessionScope(session.authUser)
+            }
 
-            val account = withTimeoutOrNull(20_000L) {
-                var result = YtMusicRepository.account()
+            val initialScope = Innertube.currentResolvedScope()
+            if (!hasExplicitPageScope && initialScope != null && !initialScope.loggedIn) {
+                restoreActiveSession(oldAccountId, oldProfileId)
+                onComplete(false)
+                return@launch
+            }
+            if (!hasExplicitPageScope && (initialScope?.pageId != null || initialScope?.dataSyncId != null)) {
+                Innertube.selectChannel(initialScope.pageId, initialScope.dataSyncId, initialScope.authUser)
+            }
+
+            val account = withTimeoutOrNull(8_000L) {
+                var result = YtMusicRepository.account(timeoutMs = 4_500L)
                 if (result.isFailure) {
-                    delay(750L)
-                    result = YtMusicRepository.account()
+                    delay(300L)
+                    result = YtMusicRepository.account(timeoutMs = 4_500L)
                 }
                 result.getOrNull()
+            } ?: if (mode == WebSessionMode.SIGN_IN && Innertube.currentResolvedScope()?.loggedIn == true) {
+                // The HTML shell already verified LOGGED_IN=true; don't stall or fail
+                // sign-in if account_menu was transiently slow — reloadForAccount()
+                // fetches full profile details immediately after closing.
+                com.music.bitchord.data.model.Account(
+                    name = "YouTube Music",
+                    email = "",
+                    thumbnailUrl = null,
+                )
+            } else {
+                null
             }
             if (account == null) {
                 restoreActiveSession(oldAccountId, oldProfileId)
                 onComplete(false)
                 return@launch
             }
+
+            val finalScope = Innertube.currentResolvedScope()
+            val resolvedPageId = session.pageId ?: finalScope?.pageId
+            val resolvedDataSyncId = session.dataSyncId ?: finalScope?.dataSyncId
+            val resolvedAuthUser = session.authUser ?: finalScope?.authUser
 
             // A channel switch is another identity under the same Google
             // login, never a new Google account. For a fresh sign-in, matching
@@ -3673,16 +3707,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val previous = authStore.sessions.firstOrNull { it.accountId == accountId }
-            val selectedProfileId = profileId(session.pageId, session.dataSyncId, account.name)
+            val selectedProfileId = profileId(resolvedPageId, resolvedDataSyncId, account.name)
             val profile = YouTubeProfile(
                 profileId = selectedProfileId,
                 name = account.name,
                 handle = account.email,
                 avatar = account.thumbnailUrl,
-                pageId = session.pageId,
-                dataSyncId = session.dataSyncId,
-                authUser = session.authUser,
-                isBrandAccount = session.pageId != null,
+                pageId = resolvedPageId,
+                dataSyncId = resolvedDataSyncId,
+                authUser = resolvedAuthUser,
+                isBrandAccount = resolvedPageId != null,
             )
             val hasRealIdentity = profile.pageId != null || profile.dataSyncId != null
             val profiles = previous?.profiles.orEmpty().filterNot { known ->

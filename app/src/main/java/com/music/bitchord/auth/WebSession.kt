@@ -116,8 +116,11 @@ object BrowserSession {
                 // which of the two a given cookie used is not recorded here.
                 val expired = "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0"
                 manager.setCookie(origin, "$expired; Path=/")
+                manager.setCookie(origin, "$expired; Path=/; Secure")
                 manager.setCookie(origin, "$expired; Path=/; Domain=$host")
+                manager.setCookie(origin, "$expired; Path=/; Domain=$host; Secure")
                 manager.setCookie(origin, "$expired; Path=/; Domain=.$host")
+                manager.setCookie(origin, "$expired; Path=/; Domain=.$host; Secure")
                 manager.setCookie(origin, "$expired; Path=/accounts")
                 manager.setCookie(origin, "$expired; Path=/ServiceLogin")
                 cleared++
@@ -135,6 +138,7 @@ object BrowserSession {
         "https://music.youtube.com",
         "https://www.youtube.com",
         "https://youtube.com",
+        "https://accounts.youtube.com",
         "https://accounts.google.com",
         "https://www.google.com",
         "https://google.com",

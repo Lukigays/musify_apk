@@ -5847,6 +5847,7 @@ private fun BitChordApp(
             var pageReady by remember(mode) { mutableStateOf(false) }
             var confirmingProfile by remember(mode) { mutableStateOf(false) }
             var autoCompleting by remember(mode) { mutableStateOf(false) }
+            var retryAttempt by remember(mode) { mutableIntStateOf(0) }
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize()) {
                     Row(
@@ -5872,7 +5873,7 @@ private fun BitChordApp(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
-                            if (pageReady && !autoCompleting) {
+                            if (mode == WebSessionMode.SWITCH_CHANNEL && pageReady && !autoCompleting) {
                                 Text(
                                     text = if (captureFailed) {
                                         stringResource(R.string.profile_unavailable)
@@ -5885,7 +5886,7 @@ private fun BitChordApp(
                                 )
                             }
                         }
-                        if (pageReady && !autoCompleting) {
+                        if (mode == WebSessionMode.SWITCH_CHANNEL && pageReady && !autoCompleting) {
                             TextButton(onClick = {
                                 captureFailed = false
                                 confirmingProfile = true
@@ -5899,31 +5900,36 @@ private fun BitChordApp(
                         }
                     }
                     Box(Modifier.weight(1f).fillMaxWidth()) {
-                        YtMusicLoginScreen(
-                            mode = mode,
-                            initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                                googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
-                            } else null,
-                            captureRequest = captureRequest,
-                            onPageReady = { pageReady = it },
-                            onAutoCompleting = { autoCompleting = it },
-                            onCaptureUnavailable = {
-                                confirmingProfile = false
-                                autoCompleting = false
-                                captureFailed = true
-                            },
-                            onCaptured = { session ->
-                                viewModel.onWebSession(session, mode) { accepted ->
+                        key(mode, retryAttempt) {
+                            YtMusicLoginScreen(
+                                mode = mode,
+                                initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
+                                    googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
+                                } else null,
+                                captureRequest = captureRequest,
+                                onPageReady = { pageReady = it },
+                                onAutoCompleting = { autoCompleting = it },
+                                onCaptureUnavailable = {
                                     confirmingProfile = false
-                                    if (accepted) {
-                                        webSession = null
-                                    } else {
-                                        autoCompleting = false
-                                        captureFailed = true
+                                    autoCompleting = false
+                                    captureFailed = true
+                                },
+                                onCaptured = { session ->
+                                    if (mode == WebSessionMode.SIGN_IN) {
+                                        autoCompleting = true
                                     }
-                                }
-                            },
-                        )
+                                    viewModel.onWebSession(session, mode) { accepted ->
+                                        confirmingProfile = false
+                                        if (accepted) {
+                                            webSession = null
+                                        } else {
+                                            autoCompleting = false
+                                            captureFailed = true
+                                        }
+                                    }
+                                },
+                            )
+                        }
                         if (autoCompleting) {
                             Box(
                                 modifier = Modifier
@@ -5942,6 +5948,31 @@ private fun BitChordApp(
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onBackground,
                                     )
+                                }
+                            }
+                        } else if (mode == WebSessionMode.SIGN_IN && captureFailed) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .padding(horizontal = 24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = stringResource(R.string.profile_unavailable),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    TextButton(onClick = {
+                                        captureFailed = false
+                                        autoCompleting = false
+                                        retryAttempt++
+                                    }) {
+                                        Text(stringResource(R.string.try_again))
+                                    }
                                 }
                             }
                         }
