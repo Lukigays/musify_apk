@@ -145,7 +145,7 @@ object AddonAuth {
                 drop(current)
             }
         }
-        throw AddonException("Musify couldn't use this device's secure key store")
+        throw AddonException("Couldn't access this device's secure key store for BitChord addon verification")
     }
 
     /**
@@ -222,7 +222,7 @@ object AddonAuth {
                 Refusal(e.message ?: "Verification refused", System.currentTimeMillis() + e.backoffMs, transient = false)
                     .also { refusal = it }.raise()
             } catch (e: Exception) {
-                val message = "Couldn't reach Musify's addon verification service"
+                val message = "Couldn't reach the BitChord addon verification service"
                 TrackLog.w(TAG, "addon auth: $message", e)
                 Refusal(message, System.currentTimeMillis() + TRANSIENT_BACKOFF_MS, transient = true)
                     .also { refusal = it }.raise()
@@ -281,7 +281,11 @@ object AddonAuth {
             generateAttestedKey(alias, Base64.getUrlDecoder().decode(challenge.challenge))
         } catch (e: Exception) {
             deleteKey(alias)
-            throw AttestRefused("This device can't prove it is running the official Musify app (no hardware key attestation)")
+            throw AttestRefused(
+                "This device can't pass BitChord hardware key attestation — " +
+                    "addons that enforce BitChord app verification reject Musify builds; " +
+                    "use an addon with BITCHORD_AUTH=off",
+            )
         }
         try {
             val body = json.encodeToString(
@@ -315,8 +319,14 @@ object AddonAuth {
                     val error = runCatching { json.decodeFromString<ServiceError>(text) }.getOrNull()
                     // Fixable by updating rather than waiting: check again soon after.
                     val backoff = if (error?.error == "outdated_app") TRANSIENT_BACKOFF_MS else REFUSED_BACKOFF_MS
+                    val detail = error?.message?.ifBlank { null } ?: "HTTP ${response.code}"
+                    val guidance = if (error?.error == "outdated_app") {
+                        ""
+                    } else {
+                        " — this addon enforces BitChord app verification (which rejects Musify builds); use an addon with BITCHORD_AUTH=off"
+                    }
                     throw AttestRefused(
-                        "Musify couldn't verify this device: " + (error?.message?.ifBlank { null } ?: "HTTP ${response.code}"),
+                        "BitChord auth rejected this build ($detail)$guidance",
                         backoff,
                     )
                 }

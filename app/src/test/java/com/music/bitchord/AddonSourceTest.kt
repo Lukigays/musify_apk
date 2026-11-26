@@ -74,6 +74,7 @@ class AddonSourceTest {
         server.shutdown()
         DeviceCodecs.forced = null
         AppSettings.dolbyAtmos.value = true
+        AppSettings.bypassLosslessOutputCheck.value = true
         AddonAuth.testHeaders = null
         AddonAuth.refuseForTest(null)
     }
@@ -289,6 +290,44 @@ class AddonSourceTest {
         assertFalse(SourceConfig(kind = SourceKind.ADDON, bitchordAuth = null).needsAddonUpdate)
         // Module indexes are a different protocol and aren't gated.
         assertFalse(SourceConfig(kind = SourceKind.CUSTOM_MODULE, bitchordAuth = false).needsAddonUpdate)
+    }
+
+    @Test
+    fun `checkValidLossless addon still works when bypassLosslessOutputCheck is enabled`() = runBlocking {
+        AppSettings.bypassLosslessOutputCheck.value = true
+        route(
+            "/manifest.json",
+            json("""{"id":"x","name":"Gated Addon","version":"1.0.0","checkValidLossless":true,"resources":["search","stream"]}"""),
+        )
+        route("/search", json("""{"tracks":[{"id":"t1","title":"Song","artist":"Artist"}]}"""))
+        route("/stream/t1", json("""{"url":"https://cdn/a.flac","codec":"flac"}"""))
+
+        val gatedConfig = config().copy(checkValidLossless = true)
+        val source = AddonSource(gatedConfig)
+
+        assertTrue(source.health() is SourceHealth.Ok)
+        assertEquals(1, source.search("song", 5).size)
+        assertNotNull(source.stream("t1", StreamRequest.Lossless))
+    }
+
+    @Test
+    fun `checkValidLossless addon is gated when bypassLosslessOutputCheck is disabled`() = runBlocking {
+        AppSettings.bypassLosslessOutputCheck.value = false
+        route(
+            "/manifest.json",
+            json("""{"id":"x","name":"Gated Addon","version":"1.0.0","checkValidLossless":true,"resources":["search","stream"]}"""),
+        )
+        route("/search", json("""{"tracks":[{"id":"t1","title":"Song","artist":"Artist"}]}"""))
+        route("/stream/t1", json("""{"url":"https://cdn/a.flac","codec":"flac"}"""))
+
+        val gatedConfig = config().copy(checkValidLossless = true)
+        val source = AddonSource(gatedConfig)
+
+        val health = source.health()
+        assertTrue("expected Rejected, got $health", health is SourceHealth.Rejected)
+        assertTrue(source.search("song", 5).isEmpty())
+        assertNull(source.stream("t1", StreamRequest.Lossless))
+        assertTrue(synchronized(seen) { seen.isEmpty() })
     }
 
     @Test

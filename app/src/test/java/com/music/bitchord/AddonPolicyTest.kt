@@ -1,11 +1,14 @@
 package com.music.bitchord
 
 import android.media.AudioDeviceInfo
+import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.sources.SourceConfig
+import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.addon.AddonManifest
 import com.music.bitchord.data.sources.addon.AddonQualityOption
 import com.music.bitchord.playback.audio.LosslessOutput
 import kotlinx.serialization.json.Json
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -131,6 +134,25 @@ class AddonPolicyTest {
         val state = LosslessOutput.decide(setOf(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP), null)
         assertFalse(state.capable)
         assertTrue(state.bluetoothCodecUnknown)
+    }
+
+    @After
+    fun tearDown() {
+        AppSettings.bypassLosslessOutputCheck.value = true
+    }
+
+    @Test
+    fun `bypassLosslessOutputCheck lets checkValidLossless addons run without a lossless output`() {
+        val gated = SourceConfig(
+            kind = SourceKind.ADDON,
+            baseUrl = "https://x",
+            checkValidLossless = true,
+        )
+        AppSettings.bypassLosslessOutputCheck.value = true
+        assertFalse(gated.awaitsLosslessOutput)
+
+        AppSettings.bypassLosslessOutputCheck.value = false
+        assertTrue(gated.awaitsLosslessOutput)
     }
 
     @Test

@@ -504,7 +504,7 @@ class AddonSource(
 
         /** What a gated addon's health says, for the editor's Test line. The sources list draws its own. */
         const val NEEDS_LOSSLESS_OUTPUT =
-            "This addon only works with a lossless output — use a lossless supported device"
+            "This addon requires a lossless output — use a lossless supported device, or enable \"Allow addons on all outputs\" in Sources"
 
         /** How many search rows to remember. A long queue's worth, several times over. */
         const val MAX_ROWS = 256

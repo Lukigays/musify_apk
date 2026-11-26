@@ -739,6 +739,10 @@
     <string name="enable_jiosaavn">Enable JioSaavn?</string>
     <string name="enable_anyway">Enable anyway</string>
     <string name="sources_subtitle">Where audio comes from and the order used</string>
+    <string name="addon_compatibility">Addon compatibility</string>
+    <string name="bypass_lossless_output_check">Allow addons on all outputs</string>
+    <string name="bypass_lossless_output_check_subtitle">Play and download from checkValidLossless addons on speakers and ordinary Bluetooth too</string>
+    <string name="bypass_lossless_output_check_footer">When on, Musify ignores addons\' checkValidLossless hardware output restriction. Turn off to require wired, USB, HDMI, or LDAC/LHDC/aptX Lossless/SSC UHQ audio.</string>
     <string name="source_matching">Source matching</string>
     <string name="upgrade_length_slack">Track length tolerance</string>
     <string name="upgrade_length_slack_subtitle">Maximum duration difference allowed for a replacement stream</string>

@@ -131,6 +131,7 @@ fun SourcesScreen(
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val upgradeLengthSlackSeconds by AppSettings.upgradeLengthSlackSeconds.collectAsStateWithLifecycle()
+    val bypassLosslessOutputCheck by AppSettings.bypassLosslessOutputCheck.collectAsStateWithLifecycle()
     val webdavUrl by AppSettings.webdavUrl.collectAsStateWithLifecycle()
     val webdavUsername by AppSettings.webdavUsername.collectAsStateWithLifecycle()
     val webdavPassword by AppSettings.webdavPassword.collectAsStateWithLifecycle()
@@ -149,7 +150,8 @@ fun SourcesScreen(
     // say why. Except an addon waiting on a lossless output: it is not to be
     // contacted at all until one is connected, and connecting one re-runs this.
     val probeKey = configs.filter { it.kind.needsServer }
-        .joinToString { "${it.id}@${it.baseUrl}@${it.checkValidLossless}" } + "@${losslessOutput.capable}"
+        .joinToString { "${it.id}@${it.baseUrl}@${it.checkValidLossless}" } +
+        "@${losslessOutput.capable}@$bypassLosslessOutputCheck"
     LaunchedEffect(probeKey) {
         configs.filter { it.kind.needsServer && it.isComplete && !it.awaitsLosslessOutput }.forEach { config ->
             val source = SourceRegistry.instance(config.id) ?: return@forEach
@@ -353,6 +355,24 @@ fun SourcesScreen(
             },
             onDisconnect = { AppSettings.clearSmb() },
         )
+
+        SettingsGroup(
+            header = stringResource(R.string.addon_compatibility),
+            footer = stringResource(R.string.bypass_lossless_output_check_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Bluetooth,
+                title = stringResource(R.string.bypass_lossless_output_check),
+                subtitle = stringResource(R.string.bypass_lossless_output_check_subtitle),
+                trailing = {
+                    IosSwitch(
+                        checked = bypassLosslessOutputCheck,
+                        onCheckedChange = AppSettings::setBypassLosslessOutputCheck,
+                    )
+                },
+                onClick = { AppSettings.setBypassLosslessOutputCheck(!bypassLosslessOutputCheck) },
+            )
+        }
 
         SettingsGroup(
             header = stringResource(R.string.source_matching),

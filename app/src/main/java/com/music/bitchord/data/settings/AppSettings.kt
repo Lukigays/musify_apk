@@ -211,6 +211,12 @@ object AppSettings {
     val upgradeLengthSlackSeconds = MutableStateFlow(DEFAULT_UPGRADE_LENGTH_SLACK_SECONDS)
 
     /**
+     * Ignore addons' `checkValidLossless` output gate so they stay active on
+     * phone speakers and ordinary Bluetooth audio. On by default for Musify.
+     */
+    val bypassLosslessOutputCheck = MutableStateFlow(true)
+
+    /**
      * What a saved file should be, answered on its own terms.
      *
      * Kept apart from the two ceilings above on purpose. Those are about what
@@ -1050,6 +1056,7 @@ object AppSettings {
             KEY_UPGRADE_LENGTH_SLACK_SECONDS,
             DEFAULT_UPGRADE_LENGTH_SLACK_SECONDS,
         ).coerceIn(MIN_UPGRADE_LENGTH_SLACK_SECONDS, MAX_UPGRADE_LENGTH_SLACK_SECONDS)
+        bypassLosslessOutputCheck.value = prefs.getBoolean(KEY_BYPASS_LOSSLESS_OUTPUT_CHECK, true)
         migrateDownloadQuality()
         downloadQuality.value = readDownloadQuality()
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
@@ -1370,6 +1377,11 @@ object AppSettings {
         )
         upgradeLengthSlackSeconds.value = normalized
         prefs.edit().putInt(KEY_UPGRADE_LENGTH_SLACK_SECONDS, normalized).apply()
+    }
+
+    fun setBypassLosslessOutputCheck(value: Boolean) {
+        bypassLosslessOutputCheck.value = value
+        prefs.edit().putBoolean(KEY_BYPASS_LOSSLESS_OUTPUT_CHECK, value).apply()
     }
 
     fun setDownloadQuality(value: DownloadQuality) {
@@ -2418,6 +2430,7 @@ object AppSettings {
     private const val KEY_QUALITY_WIFI = "audio_quality_wifi"
     private const val KEY_QUALITY_CELLULAR = "audio_quality_cellular"
     private const val KEY_UPGRADE_LENGTH_SLACK_SECONDS = "upgrade_length_slack_seconds"
+    private const val KEY_BYPASS_LOSSLESS_OUTPUT_CHECK = "bypass_lossless_output_check"
     private const val KEY_QUALITY_DOWNLOAD = "audio_quality_download"
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
