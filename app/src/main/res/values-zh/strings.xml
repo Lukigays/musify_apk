@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">导出歌单与歌曲</string>
     <string name="export_playlist_data_subtitle">M3U、M3U8、XSPF、CSV、TXT 或 JSON</string>
     <string name="auto_signing_in">正在完成登录…</string>
+    <string name="addon_compatibility">插件兼容性</string>
+    <string name="bypass_lossless_output_check">允许插件在所有输出设备上使用</string>
+    <string name="bypass_lossless_output_check_subtitle">在扬声器和普通蓝牙设备上也能播放与下载 checkValidLossless 插件内容</string>
+    <string name="bypass_lossless_output_check_footer">开启后，Musify 将忽略插件的 checkValidLossless 硬件输出限制。关闭则要求使用有线、USB、HDMI 或 LDAC/LHDC/aptX Lossless/SSC UHQ 音频。</string>
 </resources>

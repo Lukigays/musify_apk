@@ -1439,4 +1439,8 @@
     <string name="export_playlist_data">재생목록 및 곡 내보내기</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT 또는 JSON</string>
     <string name="auto_signing_in">로그인 완료 중…</string>
+    <string name="addon_compatibility">애드온 호환성</string>
+    <string name="bypass_lossless_output_check">모든 출력에서 애드온 허용</string>
+    <string name="bypass_lossless_output_check_subtitle">스피커와 일반 Bluetooth에서도 checkValidLossless 애드온으로 재생하고 다운로드합니다</string>
+    <string name="bypass_lossless_output_check_footer">켜면 Musify가 애드온의 checkValidLossless 하드웨어 출력 제한을 무시합니다. 유선, USB, HDMI 또는 LDAC/LHDC/aptX Lossless/SSC UHQ 오디오를 요구하려면 끄세요.</string>
 </resources>

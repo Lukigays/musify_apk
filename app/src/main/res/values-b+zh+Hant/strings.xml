@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">匯出播放清單與歌曲</string>
     <string name="export_playlist_data_subtitle">M3U、M3U8、XSPF、CSV、TXT 或 JSON</string>
     <string name="auto_signing_in">正在完成登入…</string>
+    <string name="addon_compatibility">外掛相容性</string>
+    <string name="bypass_lossless_output_check">允許外掛在所有輸出裝置上使用</string>
+    <string name="bypass_lossless_output_check_subtitle">在喇叭和一般藍牙裝置上也能播放與下載 checkValidLossless 外掛內容</string>
+    <string name="bypass_lossless_output_check_footer">開啟後，Musify 將忽略外掛的 checkValidLossless 硬體輸出限制。關閉則要求使用有線、USB、HDMI 或 LDAC/LHDC/aptX Lossless/SSC UHQ 音訊。</string>
 </resources>

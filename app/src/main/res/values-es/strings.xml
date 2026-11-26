@@ -1427,4 +1427,8 @@
     <string name="export_playlist_data">Exportar playlists y canciones</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT o JSON</string>
     <string name="auto_signing_in">Completando inicio de sesión…</string>
+    <string name="addon_compatibility">Compatibilidad de addons</string>
+    <string name="bypass_lossless_output_check">Permitir addons en todas las salidas</string>
+    <string name="bypass_lossless_output_check_subtitle">Reproduce y descarga desde addons checkValidLossless también en altavoces y Bluetooth estándar</string>
+    <string name="bypass_lossless_output_check_footer">Si está activado, Musify ignora la restricción de salida de hardware checkValidLossless de los addons. Desactívalo para exigir audio por cable, USB, HDMI o LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
 </resources>

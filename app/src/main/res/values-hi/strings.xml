@@ -1426,4 +1426,8 @@
     <string name="export_playlist_data">प्लेलिस्ट और गाने निर्यात करें</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, या JSON</string>
     <string name="auto_signing_in">साइन-इन पूरा हो रहा है…</string>
+    <string name="addon_compatibility">ऐडऑन संगतता</string>
+    <string name="bypass_lossless_output_check">सभी आउटपुट पर ऐडऑन की अनुमति दें</string>
+    <string name="bypass_lossless_output_check_subtitle">स्पीकर और सामान्य Bluetooth पर भी checkValidLossless ऐडऑन से चलाएं और डाउनलोड करें</string>
+    <string name="bypass_lossless_output_check_footer">चालू होने पर, Musify ऐडऑन की checkValidLossless हार्डवेयर आउटपुट सीमा को अनदेखा करता है। वायर्ड, USB, HDMI, या LDAC/LHDC/aptX Lossless/SSC UHQ ऑडियो आवश्यक करने के लिए बंद करें।</string>
 </resources>

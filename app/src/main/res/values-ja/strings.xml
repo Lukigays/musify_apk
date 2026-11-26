@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">プレイリストと曲をエクスポート</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, JSON</string>
     <string name="auto_signing_in">サインインを完了しています…</string>
+    <string name="addon_compatibility">アドオンの互換性</string>
+    <string name="bypass_lossless_output_check">すべての出力でアドオンを許可</string>
+    <string name="bypass_lossless_output_check_subtitle">スピーカーや通常の Bluetooth でも checkValidLossless アドオンからの再生とダウンロードを許可します</string>
+    <string name="bypass_lossless_output_check_footer">オンにすると、Musify はアドオンの checkValidLossless ハードウェア出力制限を無視します。有線、USB、HDMI、または LDAC/LHDC/aptX Lossless/SSC UHQ オーディオを必須にするにはオフにしてください。</string>
 </resources>

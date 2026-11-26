@@ -1460,4 +1460,8 @@
     <string name="export_playlist_data">Экспорт плейлистов и треков</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT или JSON</string>
     <string name="auto_signing_in">Завершение входа…</string>
+    <string name="addon_compatibility">Совместимость аддонов</string>
+    <string name="bypass_lossless_output_check">Разрешить аддоны на всех выходах</string>
+    <string name="bypass_lossless_output_check_subtitle">Воспроизведение и загрузка из аддонов checkValidLossless также на динамиках и обычном Bluetooth</string>
+    <string name="bypass_lossless_output_check_footer">Когда включено, Musify игнорирует аппаратное ограничение вывода checkValidLossless аддонов. Отключите, чтобы требовать проводной, USB, HDMI или LDAC/LHDC/aptX Lossless/SSC UHQ звук.</string>
 </resources>

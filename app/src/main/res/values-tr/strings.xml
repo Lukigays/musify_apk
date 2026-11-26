@@ -1426,4 +1426,8 @@
     <string name="export_playlist_data">Çalma listelerini ve parçaları dışa aktar</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT veya JSON</string>
     <string name="auto_signing_in">Oturum açma tamamlanıyor…</string>
+    <string name="addon_compatibility">Eklenti uyumluluğu</string>
+    <string name="bypass_lossless_output_check">Eklentilere tüm çıkışlarda izin ver</string>
+    <string name="bypass_lossless_output_check_subtitle">Hoparlörlerde ve standart Bluetooth üzerinde de checkValidLossless eklentilerinden çalın ve indirin</string>
+    <string name="bypass_lossless_output_check_footer">Açık olduğunda Musify, eklentilerin checkValidLossless donanım çıkışı kısıtlamasını yok sayar. Kablolu, USB, HDMI veya LDAC/LHDC/aptX Lossless/SSC UHQ ses gerektirmek için kapatın.</string>
 </resources>

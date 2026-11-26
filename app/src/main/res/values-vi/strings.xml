@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">Xuất playlist &amp; bài hát</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT hoặc JSON</string>
     <string name="auto_signing_in">Đang hoàn tất đăng nhập…</string>
+    <string name="addon_compatibility">Tương thích tiện ích bổ sung</string>
+    <string name="bypass_lossless_output_check">Cho phép tiện ích trên mọi đầu ra</string>
+    <string name="bypass_lossless_output_check_subtitle">Phát và tải xuống từ tiện ích checkValidLossless cả trên loa và Bluetooth thông thường</string>
+    <string name="bypass_lossless_output_check_footer">Khi bật, Musify bỏ qua giới hạn đầu ra phần cứng checkValidLossless của tiện ích. Tắt để yêu cầu âm thanh có dây, USB, HDMI hoặc LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
 </resources>

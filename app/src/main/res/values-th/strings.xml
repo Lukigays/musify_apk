@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">ส่งออกเพลย์ลิสต์และเพลง</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT หรือ JSON</string>
     <string name="auto_signing_in">กำลังเข้าสู่ระบบ…</string>
+    <string name="addon_compatibility">ความเข้ากันได้ของแอดออน</string>
+    <string name="bypass_lossless_output_check">อนุญาตแอดออนบนเอาต์พุตทั้งหมด</string>
+    <string name="bypass_lossless_output_check_subtitle">เล่นและดาวน์โหลดจากแอดออน checkValidLossless บนลำโพงและ Bluetooth ทั่วไปได้ด้วย</string>
+    <string name="bypass_lossless_output_check_footer">เมื่อเปิด Musify จะข้ามข้อจำกัดเอาต์พุตฮาร์ดแวร์ checkValidLossless ของแอดออน ปิดเพื่อบังคับใช้เสียงแบบมีสาย, USB, HDMI หรือ LDAC/LHDC/aptX Lossless/SSC UHQ</string>
 </resources>

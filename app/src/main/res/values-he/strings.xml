@@ -1430,4 +1430,8 @@
     <string name="export_playlist_data">ייצוא רשימות ושירים</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT או JSON</string>
     <string name="auto_signing_in">משלים התחברות…</string>
+    <string name="addon_compatibility">תאימות הרחבות</string>
+    <string name="bypass_lossless_output_check">אפשר הרחבות בכל יציאות השמע</string>
+    <string name="bypass_lossless_output_check_subtitle">נגן והורד מהרחבות checkValidLossless גם ברמקולים וב-Bluetooth רגיל</string>
+    <string name="bypass_lossless_output_check_footer">כאשר אפשרות זו פעילה, Musify מתעלמת מהגבלת יציאת החומרה checkValidLossless של הרחבות. כבה כדי לדרוש שמע קווי, USB, HDMI או LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
 </resources>

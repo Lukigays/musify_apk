@@ -1402,4 +1402,8 @@
     <string name="export_playlist_data">Ekspor playlist &amp; lagu</string>
     <string name="export_playlist_data_subtitle">M3U, M3U8, XSPF, CSV, TXT, atau JSON</string>
     <string name="auto_signing_in">Menyelesaikan login…</string>
+    <string name="addon_compatibility">Kompatibilitas addon</string>
+    <string name="bypass_lossless_output_check">Izinkan addon di semua output</string>
+    <string name="bypass_lossless_output_check_subtitle">Putar dan unduh dari addon checkValidLossless di speaker maupun Bluetooth biasa</string>
+    <string name="bypass_lossless_output_check_footer">Saat aktif, Musify mengabaikan pembatasan output perangkat keras checkValidLossless milik addon. Nonaktifkan untuk mewajibkan audio kabel, USB, HDMI, atau LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
 </resources>
