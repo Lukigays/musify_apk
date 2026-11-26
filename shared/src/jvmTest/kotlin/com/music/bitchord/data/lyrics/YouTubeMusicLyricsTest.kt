@@ -212,4 +212,47 @@ class YouTubeMusicLyricsTest {
         assertFalse(LyricsRepository.compatibleDurationSeconds(278L, 281L))
         assertFalse(LyricsRepository.compatibleDurationSeconds(0L, 278L))
     }
+
+    @Test
+    fun `splitCompositeTitle extracts song and artist from YouTube video titles`() {
+        assertEquals(
+            "Bila Kau Tak Disampingku" to "Sheila On 7",
+            splitCompositeTitle("Bila Kau Tak Disampingku - Sheila On 7", "Sheila On 7"),
+        )
+        assertEquals(
+            "Bila Kau Tak Disampingku" to "Sheila On 7",
+            splitCompositeTitle(
+                "Sheila On 7 - Bila Kau Tak Disampingku (Video Lirik) | Official Video",
+                "Sony Music Entertainment Indonesia",
+            ),
+        )
+        assertEquals(
+            "Bila Kau Tak Disampingku",
+            "Bila Kau Tak Disampingku (Lirik Lagu)".forLyricsSearch(),
+        )
+    }
+
+    @Test
+    fun `BetterLyrics retries split composite title when full title fails`() {
+        val requestedUrls = mutableListOf<String>()
+        val lines = BetterLyrics.fetchWithFallback(
+            endpoint = "https://lyrics-api.boidu.dev/getLyrics",
+            title = "Sheila On 7 - Bila Kau Tak Disampingku",
+            artist = "Sony Music Entertainment Indonesia",
+            durationMs = 253_000L,
+            album = null,
+        ) { url ->
+            requestedUrls += url
+            if ("s=Bila+Kau+Tak+Disampingku" in url || "s=Bila%20Kau%20Tak%20Disampingku" in url) {
+                """{"lrc":"[00:10.00] Bila kau tak di sampingku"}"""
+            } else {
+                null
+            }
+        }
+        assertTrue(requestedUrls.size >= 2)
+        assertEquals(
+            listOf("Bila kau tak di sampingku"),
+            lines?.filterNot { it.isGap }?.map { it.text },
+        )
+    }
 }

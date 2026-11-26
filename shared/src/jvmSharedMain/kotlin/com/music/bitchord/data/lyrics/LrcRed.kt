@@ -71,6 +71,12 @@ object LrcRed {
         get(url)?.let(TtmlLyrics::parse)?.takeIf { it.isNotEmpty() }
 
     private fun search(title: String, artist: String, durationMs: Long): Hit? {
+        searchOnce(title, artist, durationMs)?.let { return it }
+        val split = splitCompositeTitle(title, artist) ?: return null
+        return searchOnce(split.first, split.second, durationMs)
+    }
+
+    private fun searchOnce(title: String, artist: String, durationMs: Long): Hit? {
         val url = "${BASE}search.json".toHttpUrl().newBuilder()
             .addQueryParameter("q", "$title $artist".trim())
             .build()

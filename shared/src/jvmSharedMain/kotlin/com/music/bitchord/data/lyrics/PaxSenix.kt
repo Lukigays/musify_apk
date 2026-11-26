@@ -25,11 +25,14 @@ object PaxSenix {
     private const val APPLE_SEARCH = "https://amp-api.music.apple.com/v1/catalog/us/search"
     private const val MINIMUM_MATCH_SCORE = 10
     private const val TOKEN_FAILURE_COOLDOWN_MS = 5 * 60_000L
+    private const val PROXY_FAILURE_COOLDOWN_MS = 2 * 60_000L
     private const val TOKEN_SCRAPE_TIMEOUT_MS = 2_500L
+    private const val PROXY_LYRICS_TIMEOUT_MS = 3_500L
 
     private val tokenMutex = Mutex()
     private val cachedAppleToken = AtomicReference<String?>(null)
     private val tokenFailedAtMs = AtomicLong(0L)
+    private val proxyFailedAtMs = AtomicLong(0L)
 
     @Volatile
     private var apiKey: String = ""
@@ -45,14 +48,25 @@ object PaxSenix {
         durationMs: Long,
         album: String? = null,
     ): List<LyricLine>? = withContext(Dispatchers.IO) {
+        val proxyFailedAt = proxyFailedAtMs.get()
+        if (proxyFailedAt > 0L && System.currentTimeMillis() - proxyFailedAt < PROXY_FAILURE_COOLDOWN_MS) {
+            return@withContext null
+        }
         val id = searchPublicAppleTrackId(title, artist, durationMs)
             ?: return@withContext null
         val url = publicUrl("apple-music/lyrics")
             .addQueryParameter("id", id)
             .addQueryParameter("ttml", "true")
             .build()
-        lyricsGet(url.toString())
-            ?.let(::parseResponse)
+        val response = withTimeoutOrNull(PROXY_LYRICS_TIMEOUT_MS) {
+            lyricsGetWithStatus(url.toString())
+        } ?: LyricsHttpResponse(0, null)
+        if (response.statusCode == 0 || response.statusCode >= 500) {
+            proxyFailedAtMs.set(System.currentTimeMillis())
+            return@withContext null
+        }
+        proxyFailedAtMs.set(0L)
+        response.body?.let(::parseResponse)
     }
 
     suspend fun spotifyLyrics(

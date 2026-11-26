@@ -417,7 +417,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 pendingLyricsVideoId = videoId
                 lyricsFor = null
                 lyricsGeneration += 1
-                currentLyricsRequest = null
+                val generation = lyricsGeneration
+                currentLyricsRequest = LyricsRequest(videoId, title, artist, 0L, album)
                 selectedLyricsSource = null
                 manualLyricsJobs.values.forEach(Job::cancel)
                 manualLyricsJobs.clear()
@@ -427,10 +428,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _lyrics.value = null
                 _lyricsSource.value = null
                 lyricsJob?.cancel()
-                _lyricsChecked.value = false
+                if (sources.isEmpty()) {
+                    _lyricsChecked.value = true
+                } else {
+                    _lyricsChecked.value = false
+                    lyricsJob = viewModelScope.launch {
+                        // Wait briefly so tracks whose duration lands a frame later
+                        // still run with exact duration; fall back after 1.5 s so a
+                        // durationless or paused stream never stalls on the skeleton.
+                        delay(1_500L)
+                        if (generation != lyricsGeneration) return@launch
+                        runNetworkLyricsLookup(
+                            videoId = videoId,
+                            title = title,
+                            artist = artist,
+                            durationMs = 0L,
+                            album = album,
+                            sources = sources,
+                            generation = generation,
+                            embeddedPlain = null,
+                        )
+                    }
+                }
             }
             return
         }
+        val upgradingZeroDuration = pendingLyricsVideoId == videoId &&
+            currentLyricsRequest?.durationMs == 0L &&
+            !_lyrics.value.isNullOrEmpty() &&
+            sources.isNotEmpty()
         pendingLyricsVideoId = videoId
         lyricsFor = key
         lyricsGeneration += 1
@@ -442,8 +468,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         lyricsProviderResults.clear()
         _lyricsProviderStates.value =
             LyricsSource.entries.associateWith { LyricsProviderState.NOT_FETCHED }
-        _lyrics.value = null
-        _lyricsSource.value = null
+        if (!upgradingZeroDuration) {
+            _lyrics.value = null
+            _lyricsSource.value = null
+        }
         lyricsJob?.cancel()
         if (sources.isEmpty()) {
             // Switched off, or every source unticked. Nothing to look up, and
@@ -452,7 +480,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _lyricsChecked.value = true
             return
         }
-        _lyricsChecked.value = false
+        if (!upgradingZeroDuration) {
+            _lyricsChecked.value = false
+        }
         lyricsJob = viewModelScope.launch {
             // The file first, and without the duration gate below: a length is
             // only needed to *match* a track against a stranger's database, and
@@ -480,10 +510,39 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 lyricsFor = null
                 return@launch
             }
-            val lookupCompleted = java.util.concurrent.atomic.AtomicBoolean(false)
-            val found = LyricsRepository.lyrics(
-                videoId, title, artist, durationMs, album, sources,
-                AppSettings.lyricsSourceOrder.value, AppSettings.prioritizeSyllableSync.value,
+            runNetworkLyricsLookup(
+                videoId = videoId,
+                title = title,
+                artist = artist,
+                durationMs = durationMs,
+                album = album,
+                sources = sources,
+                generation = generation,
+                embeddedPlain = embeddedPlain,
+                keepExistingOnMiss = upgradingZeroDuration,
+            )
+        }
+    }
+
+    private suspend fun runNetworkLyricsLookup(
+        videoId: String,
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String?,
+        sources: Set<LyricsSource>,
+        generation: Long,
+        embeddedPlain: List<LyricLine>?,
+        keepExistingOnMiss: Boolean = false,
+    ) {
+        val order = AppSettings.lyricsSourceOrder.value
+        val prioritizeSyllable = AppSettings.prioritizeSyllableSync.value
+        val lookupCompleted = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        suspend fun querySources(targetSources: Set<LyricsSource>): LyricsRepository.Result? =
+            LyricsRepository.lyrics(
+                videoId, title, artist, durationMs, album, targetSources,
+                order, prioritizeSyllable,
                 onSourceStarted = { source -> providerStarted(generation, source) },
                 onSourceResult = { source, result ->
                     providerFinished(generation, source, result)
@@ -502,21 +561,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 },
             )
-            lookupCompleted.set(true)
-            val picked = selectedLyricsSource?.let(lyricsProviderResults::get)
-            // The file's own words beat a stranger's untimed copy; only timing,
-            // or a provider the listener picked by hand, displaces them.
-            val selected = picked
-                ?: found?.takeIf { embeddedPlain == null || EmbeddedLyrics.isSynced(it.lines) }
-            if (selected == null && embeddedPlain != null) {
-                _lyrics.value = embeddedPlain
-                _lyricsSource.value = null
-            } else {
-                _lyrics.value = selected?.lines
-                _lyricsSource.value = selected?.source
+
+        var found = querySources(sources)
+        if (found == null && selectedLyricsSource == null) {
+            val remaining = LyricsSource.offered.toSet() - sources
+            if (remaining.isNotEmpty()) {
+                found = querySources(remaining)
             }
-            _lyricsChecked.value = true
         }
+        lookupCompleted.set(true)
+        if (generation != lyricsGeneration) return
+        val picked = selectedLyricsSource?.let(lyricsProviderResults::get)
+        // If the listener already tapped a specific provider whose dedicated
+        // fetch is still running, let that fetch finish before declaring a miss.
+        val waitingOnManualPick = picked == null &&
+            selectedLyricsSource != null &&
+            manualLyricsJobs[selectedLyricsSource]?.isActive == true
+        if (waitingOnManualPick && found == null) return
+
+        // The file's own words beat a stranger's untimed copy; only timing,
+        // or a provider the listener picked by hand, displaces them.
+        val selected = picked
+            ?: found?.takeIf { embeddedPlain == null || EmbeddedLyrics.isSynced(it.lines) }
+        if (selected == null && embeddedPlain != null) {
+            _lyrics.value = embeddedPlain
+            _lyricsSource.value = null
+        } else if (selected == null && keepExistingOnMiss && !_lyrics.value.isNullOrEmpty()) {
+            // Preserve the lyrics already found by the zero-duration fallback.
+        } else {
+            _lyrics.value = selected?.lines
+            _lyricsSource.value = selected?.source
+        }
+        _lyricsChecked.value = true
     }
 
     /**
@@ -579,6 +655,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (generation != lyricsGeneration) return
         if (result == null) {
             _lyricsProviderStates.update { it + (source to LyricsProviderState.NOT_FOUND) }
+            if (selectedLyricsSource == source && _lyrics.value == null && lyricsJob?.isActive != true) {
+                _lyricsChecked.value = true
+            }
             return
         }
         lyricsProviderResults[source] = result

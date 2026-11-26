@@ -2688,6 +2688,7 @@ fun NowPlayingScreen(
                                     onPickLine = lyricPicker.pick,
                                     onTogglePick = lyricPicker.toggle,
                                     centerFocus = true,
+                                    durationMs = durationMs,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -4376,6 +4377,7 @@ fun NowPlayingScreen(
                                         picked = lyricPicker.picks,
                                         onPickLine = lyricPicker.pick,
                                         onTogglePick = lyricPicker.toggle,
+                                        durationMs = durationMs,
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }

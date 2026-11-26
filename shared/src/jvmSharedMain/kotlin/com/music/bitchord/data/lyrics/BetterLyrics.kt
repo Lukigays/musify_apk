@@ -54,10 +54,10 @@ object BetterLyrics {
         album: String?,
         get: (String) -> String?,
     ): List<LyricLine>? {
-        fun query(withAlbum: String?): List<LyricLine>? {
+        fun query(queryTitle: String, queryArtist: String, withAlbum: String?): List<LyricLine>? {
             val url = endpoint.toHttpUrl().newBuilder()
-                .addQueryParameter("s", title)
-                .addQueryParameter("a", artist)
+                .addQueryParameter("s", queryTitle)
+                .addQueryParameter("a", queryArtist)
                 .apply {
                     val seconds = durationMs / 1000
                     if (seconds > 0) addQueryParameter("d", seconds.toString())
@@ -72,7 +72,11 @@ object BetterLyrics {
         // BetterLyrics rejects requests (HTTP 401/404) when YouTube Music's album
         // edition label differs slightly from Apple's catalogue name (e.g.
         // "SOS (LANA)" vs "SOS"). Retry without the album constraint before giving up.
-        return query(album)
-            ?: if (!album.isNullOrBlank()) query(null) else null
+        query(title, artist, album)?.let { return it }
+        if (!album.isNullOrBlank()) {
+            query(title, artist, null)?.let { return it }
+        }
+        val split = splitCompositeTitle(title, artist) ?: return null
+        return query(split.first, split.second, null)
     }
 }

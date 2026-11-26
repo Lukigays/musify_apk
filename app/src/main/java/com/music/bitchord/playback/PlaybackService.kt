@@ -974,6 +974,7 @@ class PlaybackService : MediaLibraryService() {
 
     private var serviceLyricsJob: Job? = null
     private var serviceLyrics: List<LyricLine>? = null
+    private var deferredLyricsMediaId: String? = null
     private var lastPublishedSubtitle: String? = null
     private var lyricsTickerJob: Job? = null
 
@@ -1206,6 +1207,13 @@ class PlaybackService : MediaLibraryService() {
             // The player this fired on, which is by definition the one the
             // session is currently pointed at.
             val exoPlayer = player ?: return
+            if (state == Player.STATE_READY &&
+                exoPlayer.duration > 0L &&
+                deferredLyricsMediaId == exoPlayer.currentMediaItem?.mediaId
+            ) {
+                deferredLyricsMediaId = null
+                loadLyricsForCurrentTrack()
+            }
             if (state == Player.STATE_ENDED) {
                 SleepTimer.cancel()
                 // The queue ran dry, so no transition will ever close the last
@@ -8712,12 +8720,21 @@ class PlaybackService : MediaLibraryService() {
         }
 
         if (!AppSettings.syncedLyrics.value) {
+            deferredLyricsMediaId = null
             serviceLyrics = null
             stopLyricsTicker()
             return
         }
 
         val trackDurationMs = (player?.duration ?: 0L).takeIf { it > 0 } ?: currentSong.durationMillis()
+        if (currentSong.localUri == null && trackDurationMs <= 0L) {
+            deferredLyricsMediaId = currentSong.videoId
+            serviceLyricsJob?.cancel()
+            serviceLyrics = null
+            stopLyricsTicker()
+            return
+        }
+        deferredLyricsMediaId = null
 
         serviceLyricsJob?.cancel()
         serviceLyricsJob = scope.launch(Dispatchers.IO) {
@@ -8727,16 +8744,34 @@ class PlaybackService : MediaLibraryService() {
             // them synced, which is all a lock-screen line can follow.
             var lines: List<LyricLine>? = embedded?.takeIf(EmbeddedLyrics::isSynced)
             if (lines == null) {
-                val found = LyricsRepository.lyrics(
+                val activeSources = AppSettings.lyricsSources.value
+                val order = AppSettings.lyricsSourceOrder.value
+                val prioritizeSyllableSync = AppSettings.prioritizeSyllableSync.value
+                var found = LyricsRepository.lyrics(
                     videoId = currentSong.videoId,
                     title = currentSong.title,
                     artist = currentSong.artist,
                     durationMs = trackDurationMs,
                     album = currentSong.albumName,
-                    sources = AppSettings.lyricsSources.value,
-                    order = AppSettings.lyricsSourceOrder.value,
-                    prioritizeSyllableSync = AppSettings.prioritizeSyllableSync.value,
+                    sources = activeSources,
+                    order = order,
+                    prioritizeSyllableSync = prioritizeSyllableSync,
                 )
+                if (found == null && activeSources.isNotEmpty()) {
+                    val remaining = LyricsSource.offered.toSet() - activeSources
+                    if (remaining.isNotEmpty()) {
+                        found = LyricsRepository.lyrics(
+                            videoId = currentSong.videoId,
+                            title = currentSong.title,
+                            artist = currentSong.artist,
+                            durationMs = trackDurationMs,
+                            album = currentSong.albumName,
+                            sources = remaining,
+                            order = order,
+                            prioritizeSyllableSync = prioritizeSyllableSync,
+                        )
+                    }
+                }
                 lines = found?.lines?.takeIf(EmbeddedLyrics::isSynced) ?: embedded ?: found?.lines
             }
             withContext(Dispatchers.Main) {

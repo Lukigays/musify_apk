@@ -55,6 +55,19 @@ object BiniLyrics {
         album: String? = null,
         isrc: String? = null,
     ): Hit? = withContext(Dispatchers.IO) {
+        identifyOnce(title, artist, durationMs, album, isrc)?.let { return@withContext it }
+        if (!isrc.isNullOrBlank()) return@withContext null
+        val split = splitCompositeTitle(title, artist) ?: return@withContext null
+        identifyOnce(split.first, split.second, durationMs, null, null)
+    }
+
+    private fun identifyOnce(
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String?,
+        isrc: String?,
+    ): Hit? {
         val url = BASE.toHttpUrl().newBuilder()
             .apply {
                 if (!isrc.isNullOrBlank()) {
@@ -73,11 +86,11 @@ object BiniLyrics {
 
         // A miss is a 404 here rather than an empty result set, which
         // [lyricsGet] already turns into a null.
-        val body = lyricsGet(url.toString()) ?: return@withContext null
+        val body = lyricsGet(url.toString()) ?: return null
         val response = runCatching { lyricsJson.decodeFromString<Response>(body) }.getOrNull()
-            ?: return@withContext null
+            ?: return null
         val results = response.results.orEmpty()
-        if (!isrc.isNullOrBlank()) results.firstOrNull() else best(results, title, artist, durationMs)
+        return if (!isrc.isNullOrBlank()) results.firstOrNull() else best(results, title, artist, durationMs)
     }
 
     /**

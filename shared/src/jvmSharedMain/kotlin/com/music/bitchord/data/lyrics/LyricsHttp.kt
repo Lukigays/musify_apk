@@ -50,6 +50,20 @@ internal fun lyricsGet(url: String): String? = runCatching {
     }
 }.getOrNull()
 
+internal data class LyricsHttpResponse(val statusCode: Int, val body: String?)
+
+/** GET returning HTTP status code alongside the body (`0` on transport failure). */
+internal fun lyricsGetWithStatus(url: String): LyricsHttpResponse = runCatching {
+    val request = Request.Builder().url(url)
+        .header("User-Agent", LYRICS_AGENT)
+        .header("Accept", "application/json")
+        .build()
+    client.newCall(request).execute().use { response ->
+        val body = if (response.isSuccessful) response.body?.string() else null
+        LyricsHttpResponse(response.code, body)
+    }
+}.getOrElse { LyricsHttpResponse(0, null) }
+
 /** Body of an authenticated provider GET without service-specific browser headers. */
 internal fun lyricsGetBearer(url: String, bearer: String): String? = runCatching {
     if (bearer.isBlank()) return null

@@ -29,16 +29,26 @@ object KuGou {
         durationMs: Long,
         album: String? = null,
     ): List<LyricLine>? = withContext(Dispatchers.IO) {
-        val keyword = keyword(title, artist, album)
         val seconds = (durationMs / 1000).toInt()
+        fetchByQuery(title, artist, album, seconds)?.let { return@withContext it }
+        val split = splitCompositeTitle(title, artist) ?: return@withContext null
+        fetchByQuery(split.first, split.second, null, seconds)
+    }
 
+    private fun fetchByQuery(
+        title: String,
+        artist: String,
+        album: String?,
+        seconds: Int,
+    ): List<LyricLine>? {
+        val keyword = keyword(title, artist, album)
         val candidate = searchSongs(keyword, seconds)?.firstNotNullOfOrNull { hash ->
             searchLyrics(hash = hash)?.firstOrNull()
         } ?: searchLyrics(keyword = keyword, seconds = seconds)?.firstOrNull()
-            ?: return@withContext null
+            ?: return null
 
-        val lrc = download(candidate.id, candidate.accesskey) ?: return@withContext null
-        LrcLib.parseLrc(lrc).takeIf { it.isNotEmpty() }
+        val lrc = download(candidate.id, candidate.accesskey) ?: return null
+        return LrcLib.parseLrc(lrc).takeIf { it.isNotEmpty() }
     }
 
     /**

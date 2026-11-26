@@ -37,6 +37,7 @@ object LyricsPlus {
         "https://lyricsplus.binimum.org",
     )
 
+    private const val PRIMARY_TIMEOUT_MS = 4_500L
     private const val SECONDARY_START_DELAY_MS = 700L
     private const val SECONDARY_TIMEOUT_MS = 4_000L
     private const val PREFERRED_SOURCES = "apple,lyricsplus,musixmatch,qq"
@@ -49,6 +50,21 @@ object LyricsPlus {
         durationMs: Long,
         album: String? = null,
         isrc: String? = null,
+    ): List<LyricLine>? {
+        queryMirrors(title, artist, durationMs, album, isrc)?.let { return it }
+        if (!album.isNullOrBlank()) {
+            queryMirrors(title, artist, durationMs, null, isrc)?.let { return it }
+        }
+        val split = splitCompositeTitle(title, artist) ?: return null
+        return queryMirrors(split.first, split.second, durationMs, null, isrc)
+    }
+
+    private suspend fun queryMirrors(
+        title: String,
+        artist: String,
+        durationMs: Long,
+        album: String?,
+        isrc: String?,
     ): List<LyricLine>? = coroutineScope {
         val hosts = lastGood.get()
             ?.takeIf { it in MIRRORS }
@@ -58,7 +74,11 @@ object LyricsPlus {
         val primary = hosts.first()
         val secondary = hosts.drop(1)
         val pending = mutableListOf<Pair<String, kotlinx.coroutines.Deferred<List<LyricLine>?>>>()
-        pending += primary to async(Dispatchers.IO) { fetch(primary, title, artist, durationMs, album, isrc) }
+        pending += primary to async(Dispatchers.IO) {
+            withTimeoutOrNull(PRIMARY_TIMEOUT_MS) {
+                fetch(primary, title, artist, durationMs, album, isrc)
+            }
+        }
         secondary.forEach { host ->
             pending += host to async(Dispatchers.IO) {
                 delay(SECONDARY_START_DELAY_MS)

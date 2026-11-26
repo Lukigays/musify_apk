@@ -37,25 +37,63 @@ object LrcLib {
             .build()
     }
 
-    /** Synced lyrics for a track, or null when nothing usable is published. */
+    /** Synced lyrics for a track, or plain fallback when nothing synced exists. */
     suspend fun lyrics(title: String, artist: String, durationMs: Long): List<LyricLine>? =
         withContext(Dispatchers.IO) {
             val cleanTitle = title.clean()
             val cleanArtist = artist.clean()
             val seconds = (durationMs / 1000).toInt()
-
-            val exact = runCatching { exactMatch(cleanTitle, cleanArtist, seconds) }.getOrNull()
-            var synced = exact ?: runCatching { bestSearchHit(cleanTitle, cleanArtist, seconds) }
-                .getOrNull()
-            if (synced == null) {
+            val queries = buildList {
+                add(cleanTitle to cleanArtist)
                 val altTitle = title.forLyricsSearch()
                 val altArtist = artist.artistForLyricsSearch()
                 if (altTitle != cleanTitle || altArtist != cleanArtist) {
-                    synced = runCatching { exactMatch(altTitle, altArtist, seconds) }.getOrNull()
-                        ?: runCatching { bestSearchHit(altTitle, altArtist, seconds) }.getOrNull()
+                    add(altTitle to altArtist)
+                }
+                splitCompositeTitle(title, artist)?.let { (splitTitle, splitArtist) ->
+                    add(splitTitle.clean() to splitArtist.clean())
+                }
+            }.distinct()
+
+            var plainFallback: String? = null
+            for ((queryTitle, queryArtist) in queries) {
+                if (seconds > 0) {
+                    runCatching { exactMatch(queryTitle, queryArtist, seconds) }.getOrNull()
+                        ?.let(::parseLrc)?.takeIf { it.isNotEmpty() }
+                        ?.let { return@withContext it }
+                }
+                val (synced, plain) = runCatching {
+                    bestSearchHit(queryTitle, queryArtist, seconds)
+                }.getOrDefault(null to null)
+                if (synced != null) {
+                    parseLrc(synced).takeIf { it.isNotEmpty() }?.let { return@withContext it }
+                }
+                if (plainFallback == null && plain != null) {
+                    plainFallback = plain
                 }
             }
-            synced?.let(::parseLrc)?.takeIf { it.isNotEmpty() }
+
+            // Last-chance free-text query catches YouTube uploads where the
+            // video artist is a label/uploader rather than the performer.
+            for ((queryTitle, queryArtist) in queries) {
+                val q = "$queryTitle $queryArtist".trim()
+                if (q.isEmpty()) continue
+                val (synced, plain) = runCatching {
+                    bestFreeSearchHit(queryTitle, queryArtist, seconds)
+                }.getOrDefault(null to null)
+                if (synced != null) {
+                    parseLrc(synced).takeIf { it.isNotEmpty() }?.let { return@withContext it }
+                }
+                if (plainFallback == null && plain != null) {
+                    plainFallback = plain
+                }
+            }
+
+            plainFallback?.lines()
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.takeIf { it.isNotEmpty() }
+                ?.map { LyricLine(0L, it) }
         }
 
     private fun exactMatch(title: String, artist: String, seconds: Int): String? {
@@ -73,21 +111,69 @@ object LrcLib {
      * Fuzzy fallback. Prefers whichever hit is closest in length to what we're
      * actually playing — same song, different edit, would drift otherwise.
      */
-    private fun bestSearchHit(title: String, artist: String, seconds: Int): String? {
+    private fun bestSearchHit(title: String, artist: String, seconds: Int): Pair<String?, String?> {
         val url = "$BASE/search".toHttpUrl().newBuilder()
             .addQueryParameter("track_name", title)
             .addQueryParameter("artist_name", artist)
             .build()
-        val body = get(url.toString()) ?: return null
-        val hits = json.parseToJsonElement(body) as? JsonArray ?: return null
-        return hits.mapNotNull { it as? JsonObject }
-            .filter { it["syncedLyrics"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true }
-            .minByOrNull {
-                val d = it["duration"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-                abs(d - seconds)
-            }
-            ?.get("syncedLyrics")?.jsonPrimitive?.contentOrNull
+        val body = get(url.toString()) ?: return null to null
+        val hits = (json.parseToJsonElement(body) as? JsonArray)
+            ?.mapNotNull { it as? JsonObject }
+            ?: return null to null
+        return selectBestFromHits(hits, seconds)
     }
+
+    private fun bestFreeSearchHit(title: String, artist: String, seconds: Int): Pair<String?, String?> {
+        val url = "$BASE/search".toHttpUrl().newBuilder()
+            .addQueryParameter("q", "$title $artist".trim())
+            .build()
+        val body = get(url.toString()) ?: return null to null
+        val hits = (json.parseToJsonElement(body) as? JsonArray)
+            ?.mapNotNull { it as? JsonObject }
+            ?: return null to null
+        val normTitle = normalizeMatchText(title)
+        val normArtist = normalizeMatchText(artist)
+        val filtered = hits.filter { hit ->
+            val hitTitle = normalizeMatchText(
+                hit["trackName"]?.jsonPrimitive?.contentOrNull
+                    ?: hit["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            )
+            val hitArtist = normalizeMatchText(hit["artistName"]?.jsonPrimitive?.contentOrNull.orEmpty())
+            val titleMatches = normTitle.isNotEmpty() &&
+                (hitTitle == normTitle || normTitle in hitTitle || hitTitle in normTitle)
+            val durationOk = seconds <= 0 ||
+                (hit["duration"]?.jsonPrimitive?.doubleOrNull?.let { abs(it - seconds) <= 15.0 } ?: false)
+            val artistOk = normArtist.isEmpty() ||
+                hitArtist.isEmpty() ||
+                normArtist in hitArtist ||
+                hitArtist in normArtist ||
+                titleMatches && hitTitle == normTitle
+            titleMatches && durationOk && artistOk
+        }
+        return selectBestFromHits(filtered, seconds)
+    }
+
+    private fun selectBestFromHits(hits: List<JsonObject>, seconds: Int): Pair<String?, String?> {
+        fun pickHit(field: String): String? {
+            val candidates = hits.filter { it[field]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true }
+            if (candidates.isEmpty()) return null
+            val chosen = if (seconds > 0) {
+                candidates.minByOrNull {
+                    val d = it["duration"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                    abs(d - seconds)
+                }
+            } else {
+                candidates.firstOrNull()
+            }
+            return chosen?.get(field)?.jsonPrimitive?.contentOrNull
+        }
+        return pickHit("syncedLyrics") to pickHit("plainLyrics")
+    }
+
+    private fun normalizeMatchText(value: String): String =
+        value.lowercase().filter { it.isLetterOrDigit() || it == ' ' }
+            .replace(Regex("\\s+"), " ")
+            .trim()
 
     private fun get(url: String): String? {
         val request = Request.Builder().url(url).header("User-Agent", AGENT).build()

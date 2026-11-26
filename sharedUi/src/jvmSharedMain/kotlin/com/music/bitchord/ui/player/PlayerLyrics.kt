@@ -134,6 +134,7 @@ import com.music.bitchord.data.lyrics.isGeniusSectionHeader
 import com.music.bitchord.data.lyrics.GrowingWord
 import com.music.bitchord.data.lyrics.LyricAlignment
 import com.music.bitchord.data.lyrics.LyricLine
+import com.music.bitchord.data.lyrics.LyricWord
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.lyrics.translationLanguageName
 import com.music.bitchord.ui.haptics.Haptic
@@ -603,20 +604,21 @@ internal fun CurrentLyricStrip(
     loadingText: String,
     onClick: () -> Unit,
 ) {
+    val animatedLines = remember(lines, durationMs) { lines.withAppleAnimationWords(durationMs) }
     // Compute the active lyric text so we can determine RTL direction at the
     // strip level.  This lets us override the parent Column's forced
     // CenterHorizontally alignment and flush RTL lines to the right edge.
-    val isSynced = remember(lines) { lines.any { it.timeMs > 0L } }
+    val isSynced = remember(animatedLines) { animatedLines.any { it.timeMs > 0L } }
     var stripRtl by remember { mutableStateOf(false) }
     var activeText by remember { mutableStateOf("") }
     if (isSynced) {
         val clock = rememberLyricClock(trackKey, playhead, isPlaying)
-        val index by remember(lines) {
-            derivedStateOf { lines.indexOfLast { it.timeMs <= clock.longValue } }
+        val index by remember(animatedLines) {
+            derivedStateOf { animatedLines.indexOfLast { it.timeMs <= clock.longValue } }
         }
-        val current = lines.getOrNull(index)
+        val current = animatedLines.getOrNull(index)
         val instrumental = current == null || current.isGap
-        val firstSung = remember(lines) { lines.indexOfFirst { !it.isGap } }
+        val firstSung = remember(animatedLines) { animatedLines.indexOfFirst { !it.isGap } }
         val intro = instrumental && firstSung >= 0 && index < firstSung
         val introLines = stringArrayResource(Res.array.lyrics_intro_lines)
         val introLine = remember(trackKey) { introLines.random() }
@@ -640,9 +642,9 @@ internal fun CurrentLyricStrip(
                 // back up into it.
                 .offset(y = 6.dp),
         ) {
-            if (lines.isNotEmpty()) {
+            if (animatedLines.isNotEmpty()) {
                 CurrentLyricLine(
-                    lines = lines,
+                    lines = animatedLines,
                     trackKey = trackKey,
                     playhead = playhead,
                     isPlaying = isPlaying,
@@ -1824,21 +1826,26 @@ internal fun LyricsPanel(
      * read from its top edge leaves most of the screen below the words.
      */
     centerFocus: Boolean = false,
+    durationMs: Long = 0L,
     modifier: Modifier = Modifier,
 ) {
+    val animatedLines = remember(lines, durationMs) { lines.withAppleAnimationWords(durationMs) }
     val panelPlaying = isPlaying && active
     val clock = rememberLyricClock(trackKey, playhead, isPlaying, active)
     val subReveal = rememberSubLyricsReveal(subLines, trackKey)
+    val animatedSubLines = remember(subReveal.lines, animatedLines) {
+        subReveal.lines?.withAppleTranslationTiming(animatedLines)
+    }
 
-    val isSynced = remember(lines) { lines.any { it.timeMs > 0L } }
+    val isSynced = remember(animatedLines) { animatedLines.any { it.timeMs > 0L } }
     // Only a song that actually names a second voice is laid out as one. A
     // single-voice song has every line on the left already, so splitting the
     // panel into lanes for it would just be a narrower panel.
-    val duet = remember(lines) { lines.any { it.alignment == LyricAlignment.End } }
+    val duet = remember(animatedLines) { animatedLines.any { it.alignment == LyricAlignment.End } }
 
-    val activeRows by remember(lines, isSynced) {
+    val activeRows by remember(animatedLines, isSynced) {
         derivedStateOf {
-            if (!isSynced) emptyList() else activeLyricRows(lines, clock.longValue)
+            if (!isSynced) emptyList() else activeLyricRows(animatedLines, clock.longValue)
         }
     }
     // The uppermost unfinished vocal owns the scroll anchor until its end,
@@ -1851,13 +1858,13 @@ internal fun LyricsPanel(
     //
     // Kept apart from [scrollLine] on purpose: this leads, and the sweep must
     // not. Everything lit by the clock still goes through the real one.
-    val leadLine by remember(lines, isSynced) {
+    val leadLine by remember(animatedLines, isSynced) {
         derivedStateOf {
             if (!isSynced) {
                 -1
             } else {
                 val now = clock.longValue
-                activeLyricRows(lines, now + scrollLead(lines, now)).firstOrNull() ?: -1
+                activeLyricRows(animatedLines, now + scrollLead(animatedLines, now)).firstOrNull() ?: -1
             }
         }
     }
@@ -1951,8 +1958,8 @@ internal fun LyricsPanel(
     // behind it should be running. Held as a plain value plus a frame clock
     // rather than an animation per row: sixty rows each with their own
     // Animatable is sixty animations to start and stop on every handover.
-    var run by remember(lines) { mutableStateOf(ScrollRun(0, 0f, LYRIC_SETTLE_MS)) }
-    val since = remember(lines) { mutableFloatStateOf(0f) }
+    var run by remember(animatedLines) { mutableStateOf(ScrollRun(0, 0f, LYRIC_SETTLE_MS)) }
+    val since = remember(animatedLines) { mutableFloatStateOf(0f) }
     LaunchedEffect(run.id) {
         if (run.id == 0) return@LaunchedEffect
         animate(
@@ -1989,7 +1996,7 @@ internal fun LyricsPanel(
     // browsing gesture should suspend following, not our own animation.
     LaunchedEffect(focusLine, browsing, controlsOpen, active) {
         if (active && isSynced && !browsing &&
-            focusLine >= 0 && focusLine in lines.indices
+            focusLine >= 0 && focusLine in animatedLines.indices
         ) {
             // Centred, the top padding is half the viewport, and it only exists
             // a frame after the viewport does. Placing against the frame before
@@ -2016,7 +2023,7 @@ internal fun LyricsPanel(
                 // given the run-up's own duration and curve instead of the
                 // list's default spring.
                 visible != null -> {
-                    val span = scrollLead(lines, clock.longValue).toInt()
+                    val span = scrollLead(animatedLines, clock.longValue).toInt()
                     val distance = (visible.offset - focusOffset(visible.size)).toFloat()
                     run = ScrollRun(run.id + 1, distance, span)
                     // The same curve the rows catch up on. Two different
@@ -2050,7 +2057,7 @@ internal fun LyricsPanel(
         }
     }
 
-    if (lines.isEmpty()) {
+    if (animatedLines.isEmpty()) {
         val empty = modifier.revealLyricsControlsOnTap(!controlsOpen, onBottomHalfTap)
         // "None" is a finding, and it is only worth reporting once the lookup
         // has actually come back with it.
@@ -2097,7 +2104,7 @@ internal fun LyricsPanel(
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
-        itemsIndexed(lines) { index, line ->
+        itemsIndexed(animatedLines) { index, line ->
             if (!isSynced && isGeniusSectionHeader(line.text)) {
                 val sectionTitle = line.text.removePrefix("[").removeSuffix("]").trim()
                 Column(
@@ -2170,7 +2177,7 @@ internal fun LyricsPanel(
                 // dots lighting in turn across the interlude, so a long one
                 // reads as time running down instead of a symbol parked on
                 // screen waiting for the singing to come back.
-                val until = lines.getOrNull(index + 1)?.timeMs ?: line.endMs
+                val until = animatedLines.getOrNull(index + 1)?.timeMs ?: line.endMs
                 // How far through the break the song is, held at 0 before it and
                 // 1 after: the dots read the clock only while it is running, so
                 // a break that is not playing never redraws — see SweptLyricLine.
@@ -2399,7 +2406,7 @@ internal fun LyricsPanel(
                 // Lead and answering vocal are one row: they are one line of
                 // the song, they scale and dim together, and tapping either
                 // seeks to the same place.
-                val sub = subReveal.lines?.getOrNull(index)
+                val sub = animatedSubLines?.getOrNull(index)
                 val subStyle = style.copy(
                     fontSize = SUB_LYRIC_FONT_SIZE,
                     lineHeight = SUB_LYRIC_LINE_HEIGHT,
@@ -3327,4 +3334,131 @@ internal fun rememberLyricsTranslation(
         toggleTranslation = toggleTranslation,
         toggleRomanization = toggleRomanization,
     )
+}
+
+private val APPLE_WORD_TOKEN = Regex("""\S+""")
+private val PAUSE_PUNCTUATION = charArrayOf(',', ';', ':', '.', '!', '?', '—', '-')
+
+/**
+ * Equips timed line-synced lyrics (LRCLIB, KuGou, YouTube Music, YouTube
+ * captions, Unison LRC, PaxSenix Spotify, line-synced TTML) with natural
+ * syllable-weighted word timings at the display layer so every synced
+ * provider renders through [SweptLyricLine] with Apple's feathered sweep,
+ * word lift, and carried-note bloom.
+ *
+ * Lines that already carry real word/syllable timings ([LyricLine.isWordSynced])
+ * or mirror an original [LyricLine.timingSource] stay untouched, and unsynced
+ * plain-text lyrics (`all timeMs == 0L`) are returned unmodified.
+ */
+internal fun List<LyricLine>.withAppleAnimationWords(durationMs: Long = 0L): List<LyricLine> {
+    if (isEmpty() || none { it.timeMs > 0L }) return this
+    return mapIndexed { index, line ->
+        val nextStartMs = drop(index + 1).firstOrNull { it.timeMs > line.timeMs }?.timeMs
+        val updatedBg = line.background?.let { bg ->
+            bg.withSynthesizedWordTiming(
+                endBoundMs = bg.sungUntilMs?.takeIf { it > bg.timeMs }
+                    ?: nextStartMs
+                    ?: durationMs.takeIf { it > bg.timeMs },
+                respectSungUntil = bg.sungUntilMs != null,
+            )
+        }
+        val withBg = if (updatedBg !== line.background) line.copy(background = updatedBg) else line
+        if (withBg.isGap || withBg.isWordSynced || withBg.timingSource != null) {
+            withBg
+        } else {
+            val endBoundMs = withBg.sungUntilMs?.takeIf { it > withBg.timeMs }
+                ?: nextStartMs
+                ?: durationMs.takeIf { it > withBg.timeMs }
+            withBg.withSynthesizedWordTiming(
+                endBoundMs = endBoundMs,
+                respectSungUntil = withBg.sungUntilMs != null &&
+                    (nextStartMs == null || withBg.sungUntilMs <= nextStartMs),
+            )
+        }
+    }
+}
+
+internal fun List<LyricLine>.withAppleTranslationTiming(leadLines: List<LyricLine>): List<LyricLine> =
+    mapIndexed { index, sub ->
+        val lead = leadLines.getOrNull(index) ?: return@mapIndexed sub
+        val updatedBg = sub.background?.let { subBg ->
+            val leadBg = lead.background
+            if (leadBg != null && !subBg.isGap && !subBg.isWordSynced &&
+                subBg.timingSource == null && leadBg.isWordSynced && subBg.text.isNotEmpty()
+            ) {
+                subBg.copy(
+                    words = listOf(LyricWord(leadBg.words.first().startMs, leadBg.words.last().endMs, subBg.text)),
+                    timingSource = leadBg,
+                )
+            } else {
+                subBg
+            }
+        }
+        val withBg = if (updatedBg !== sub.background) sub.copy(background = updatedBg) else sub
+        if (!withBg.isGap && !withBg.isWordSynced && withBg.timingSource == null &&
+            lead.isWordSynced && withBg.text.isNotEmpty()
+        ) {
+            withBg.copy(
+                words = listOf(LyricWord(lead.words.first().startMs, lead.words.last().endMs, withBg.text)),
+                timingSource = lead,
+            )
+        } else {
+            withBg
+        }
+    }
+
+private fun LyricLine.withSynthesizedWordTiming(
+    endBoundMs: Long?,
+    respectSungUntil: Boolean,
+): LyricLine {
+    if (isGap || isWordSynced || timingSource != null || text.isEmpty()) return this
+    val tokens = APPLE_WORD_TOKEN.findAll(text).map { it.value }.toList()
+    if (tokens.isEmpty()) return this
+
+    val startMs = timeMs
+    val coreTotal = tokens.sumOf { token -> token.count { it.isLetterOrDigit() }.coerceAtLeast(1) }
+    val estimatedMs = (1_800L + tokens.size * 380L + coreTotal * 48L).coerceIn(2_800L, 8_500L)
+    val endMs = when {
+        respectSungUntil && endBoundMs != null && endBoundMs > startMs -> endBoundMs
+        endBoundMs != null && endBoundMs > startMs -> {
+            val slot = endBoundMs - startMs
+            when {
+                slot <= 350L -> endBoundMs
+                slot <= estimatedMs -> {
+                    val breath = minOf(220L, slot / 6)
+                    (endBoundMs - breath).coerceAtLeast(startMs + 250L)
+                }
+                else -> startMs + estimatedMs
+            }
+        }
+        else -> startMs + estimatedMs
+    }
+    val spanMs = endMs - startMs
+    if (spanMs <= 80L) return this
+
+    if (tokens.size == 1 || spanMs < tokens.size.toLong() * 2L) {
+        return copy(words = listOf(LyricWord(startMs, endMs, text.trim())))
+    }
+
+    val weights = DoubleArray(tokens.size) { idx ->
+        val token = tokens[idx]
+        val coreLen = token.count { it.isLetterOrDigit() }.coerceAtLeast(1)
+        val pauseBoost = if (token.last() in PAUSE_PUNCTUATION) 0.45 else 0.0
+        val tailHoldBoost = if (idx == tokens.lastIndex) 0.40 else 0.0
+        0.55 + coreLen * 0.35 + pauseBoost + tailHoldBoost
+    }
+    val totalWeight = weights.sum().coerceAtLeast(1.0)
+    var cumulative = 0.0
+    var cursor = startMs
+    val words = tokens.mapIndexed { idx, token ->
+        cumulative += weights[idx]
+        val wordEnd = if (idx == tokens.lastIndex) {
+            endMs
+        } else {
+            val rawEnd = startMs + ((cumulative / totalWeight) * spanMs).toLong()
+            rawEnd.coerceAtLeast(cursor + 1L).coerceAtMost(endMs)
+        }
+        LyricWord(cursor, wordEnd, token).also { cursor = wordEnd }
+    }
+    return copy(words = words)
 }

@@ -69,11 +69,12 @@ object LyricsRepository {
         val deferred: CompletableDeferred<Result?>,
     ) {
         lateinit var job: Job
-        val started: MutableSet<LyricsSource> = Collections.synchronizedSet(HashSet())
-        val results: ConcurrentHashMap<LyricsSource, Result?> = ConcurrentHashMap()
+        val lock = Any()
+        val started: MutableSet<LyricsSource> = HashSet()
+        val results: MutableMap<LyricsSource, Result?> = HashMap()
         @Volatile var latestPreliminary: Result? = null
         val waiters = AtomicInteger(0)
-        val listeners = CopyOnWriteArrayList<LookupListeners>()
+        val listeners = mutableListOf<LookupListeners>()
     }
 
     private data class IndexedResult(
@@ -91,7 +92,7 @@ object LyricsRepository {
 
     private const val RESULT_CACHE_LIMIT = 150
     private const val WORD_GRACE_MS = 900L
-    private const val LINE_UPGRADE_GRACE_MS = 2_000L
+    private const val LINE_UPGRADE_GRACE_MS = 2_400L
     private const val ISRC_CROSSFEED_WAIT_MS = 1_500L
 
     private val sharedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -192,13 +193,17 @@ object LyricsRepository {
         if (compatibleActiveKey != null && compatibleActiveKey != key) {
             inFlight.computeIfPresent(compatibleActiveKey) { _, existing ->
                 if (!existing.deferred.isCompleted) {
-                    existing.waiters.incrementAndGet()
-                    snapshotStarted = synchronized(existing.started) { existing.started.toList() }
-                    snapshotResults = existing.results.toMap()
-                    snapshotPreliminary = existing.latestPreliminary
-                    existing.listeners.add(callbackBundle)
-                    joinedRun = existing
-                    activeKey = compatibleActiveKey
+                    synchronized(existing.lock) {
+                        if (!existing.deferred.isCompleted) {
+                            existing.waiters.incrementAndGet()
+                            snapshotStarted = existing.started.toList()
+                            snapshotResults = existing.results.toMap()
+                            snapshotPreliminary = existing.latestPreliminary
+                            existing.listeners.add(callbackBundle)
+                            joinedRun = existing
+                            activeKey = compatibleActiveKey
+                        }
+                    }
                 }
                 existing
             }
@@ -206,17 +211,21 @@ object LyricsRepository {
 
         val run = joinedRun ?: inFlight.compute(key) { _, existing ->
             if (existing != null && !existing.deferred.isCompleted) {
-                existing.waiters.incrementAndGet()
-                snapshotStarted = synchronized(existing.started) { existing.started.toList() }
-                snapshotResults = existing.results.toMap()
-                snapshotPreliminary = existing.latestPreliminary
-                existing.listeners.add(callbackBundle)
+                synchronized(existing.lock) {
+                    existing.waiters.incrementAndGet()
+                    snapshotStarted = existing.started.toList()
+                    snapshotResults = existing.results.toMap()
+                    snapshotPreliminary = existing.latestPreliminary
+                    existing.listeners.add(callbackBundle)
+                }
                 existing
             } else {
                 createdHere = true
                 val fresh = InFlightLookup(deferred = CompletableDeferred())
                 fresh.waiters.incrementAndGet()
-                fresh.listeners.add(callbackBundle)
+                synchronized(fresh.lock) {
+                    fresh.listeners.add(callbackBundle)
+                }
                 fresh.job = sharedScope.launch(start = CoroutineStart.LAZY) {
                     try {
                         val found = executeLookup(
@@ -229,19 +238,33 @@ object LyricsRepository {
                             sequence = sequence,
                             prioritizeSyllableSync = prioritizeSyllableSync,
                             onSourceStarted = { source ->
-                                fresh.started.add(source)
-                                fresh.listeners.forEach { it.onSourceStarted?.invoke(source) }
+                                val targets = synchronized(fresh.lock) {
+                                    fresh.started.add(source)
+                                    fresh.listeners.toList()
+                                }
+                                targets.forEach { it.onSourceStarted?.invoke(source) }
                             },
                             onSourceResult = { source, result ->
-                                fresh.results[source] = result
-                                fresh.listeners.forEach { it.onSourceResult?.invoke(source, result) }
+                                val targets = synchronized(fresh.lock) {
+                                    fresh.started.remove(source)
+                                    fresh.results[source] = result
+                                    fresh.listeners.toList()
+                                }
+                                targets.forEach { it.onSourceResult?.invoke(source, result) }
                             },
                             onSourceCancelled = { source ->
-                                fresh.listeners.forEach { it.onSourceCancelled?.invoke(source) }
+                                val targets = synchronized(fresh.lock) {
+                                    fresh.started.remove(source)
+                                    fresh.listeners.toList()
+                                }
+                                targets.forEach { it.onSourceCancelled?.invoke(source) }
                             },
                             onPreliminaryResult = { result ->
-                                fresh.latestPreliminary = result
-                                fresh.listeners.forEach { it.onPreliminaryResult?.invoke(result) }
+                                val targets = synchronized(fresh.lock) {
+                                    fresh.latestPreliminary = result
+                                    fresh.listeners.toList()
+                                }
+                                targets.forEach { it.onPreliminaryResult?.invoke(result) }
                             },
                         )
                         if (found != null) {
@@ -274,7 +297,9 @@ object LyricsRepository {
         return try {
             run.deferred.await()
         } finally {
-            run.listeners.remove(callbackBundle)
+            synchronized(run.lock) {
+                run.listeners.remove(callbackBundle)
+            }
             inFlight.computeIfPresent(activeKey) { _, current ->
                 if (current === run && current.waiters.decrementAndGet() <= 0 && !current.deferred.isCompleted) {
                     current.job.cancel()
