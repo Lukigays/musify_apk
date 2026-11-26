@@ -171,7 +171,7 @@ fun YtMusicLoginScreen(
         waitingForMusicCookies = false
         webView?.stopLoading()
         currentOnAutoCompleting(false)
-        currentOnCaptureUnavailable()
+        currentOnUnavailable()
     }
 
     AndroidView(
