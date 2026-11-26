@@ -3366,13 +3366,14 @@ internal fun List<LyricLine>.withAppleAnimationWords(durationMs: Long = 0L): Lis
         if (withBg.isGap || withBg.isWordSynced || withBg.timingSource != null) {
             withBg
         } else {
-            val endBoundMs = withBg.sungUntilMs?.takeIf { it > withBg.timeMs }
+            val lineSungUntil = withBg.sungUntilMs?.takeIf { it > withBg.timeMs }
+            val endBoundMs = lineSungUntil
                 ?: nextStartMs
                 ?: durationMs.takeIf { it > withBg.timeMs }
             withBg.withSynthesizedWordTiming(
                 endBoundMs = endBoundMs,
-                respectSungUntil = withBg.sungUntilMs != null &&
-                    (nextStartMs == null || withBg.sungUntilMs <= nextStartMs),
+                respectSungUntil = lineSungUntil != null &&
+                    (nextStartMs == null || lineSungUntil <= nextStartMs),
             )
         }
     }
