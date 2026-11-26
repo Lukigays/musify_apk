@@ -1430,4 +1430,21 @@
     <string name="bypass_lossless_output_check">Eklentilere tüm çıkışlarda izin ver</string>
     <string name="bypass_lossless_output_check_subtitle">Hoparlörlerde ve standart Bluetooth üzerinde de checkValidLossless eklentilerinden çalın ve indirin</string>
     <string name="bypass_lossless_output_check_footer">Açık olduğunda Musify, eklentilerin checkValidLossless donanım çıkışı kısıtlamasını yok sayar. Kablolu, USB, HDMI veya LDAC/LHDC/aptX Lossless/SSC UHQ ses gerektirmek için kapatın.</string>
+    <string name="preset_hires_addon_title">Add Musify Hi-Res · FLAC (Free)</string>
+    <string name="preset_hires_addon_subtitle">1-tap preset · musify-hires-addon.vercel.app</string>
+    <string name="preset_hires_addon_adding">Connecting to Musify Hi-Res · FLAC…</string>
+    <string name="source_backup_header">Source Backup</string>
+    <string name="source_backup_footer">Back up your addon URLs, order, and source switches as JSON, or paste addon links directly from the clipboard.</string>
+    <string name="source_backup_export">Export sources</string>
+    <string name="source_backup_export_subtitle">Save configured addons and sources as JSON</string>
+    <string name="source_backup_exported">Exported %1$d sources</string>
+    <string name="source_backup_import">Import sources</string>
+    <string name="source_backup_import_subtitle">Merge addons from a JSON file or URL list</string>
+    <string name="source_backup_imported">Imported %1$d new · %2$d updated</string>
+    <string name="source_backup_copy">Copy sources</string>
+    <string name="source_backup_copy_subtitle">Copy source backup JSON to clipboard</string>
+    <string name="source_backup_copied">Copied %1$d addon(s) to clipboard</string>
+    <string name="source_backup_paste">Paste sources</string>
+    <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
+    <string name="source_backup_clipboard_empty">Clipboard is empty</string>
 </resources>

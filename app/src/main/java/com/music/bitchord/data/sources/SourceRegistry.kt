@@ -16,11 +16,15 @@ import com.music.bitchord.data.sources.addon.DetectedFormat
 import com.music.bitchord.data.sources.addon.SourceFormats
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.playback.audio.LosslessOutput
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import java.util.UUID
 
@@ -129,6 +133,19 @@ object SourceRegistry {
     private lateinit var prefs: SharedPreferences
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val prettyJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
+
+    @Serializable
+    data class SourcesBackup(
+        val version: Int = 1,
+        val sources: List<SourceConfig> = emptyList(),
+    )
+
+    data class ImportResult(
+        val added: Int,
+        val updated: Int,
+        val skipped: Int,
+    )
 
     /** Every configured source, enabled or not. */
     val configs = MutableStateFlow<List<SourceConfig>>(emptyList())
@@ -633,7 +650,185 @@ object SourceRegistry {
             .build()
             .toString()
 
+    fun hasPresetAddon(): Boolean = duplicateOf(PRESET_HIRES_ADDON_URL) != null
+
+    suspend fun installPresetAddon(): Result<SourceConfig> {
+        duplicateOf(PRESET_HIRES_ADDON_URL)?.let { existing ->
+            return Result.success(existing)
+        }
+        val identified = withContext(Dispatchers.IO) {
+            runCatching { identify(PRESET_HIRES_ADDON_URL) }.getOrElse { Result.failure(it) }
+        }
+        val found = identified.getOrElse { return Result.failure(it) }
+        duplicateOf(found.baseUrl)?.let { existing ->
+            return Result.success(existing)
+        }
+        add(found)
+        return Result.success(found)
+    }
+
+    fun suggestedBackupFilename(): String = "musify-sources.json"
+
+    fun exportSourcesJson(): String =
+        prettyJson.encodeToString(
+            SourcesBackup.serializer(),
+            SourcesBackup(version = 1, sources = configs.value),
+        )
+
+    suspend fun exportSourcesToUri(context: Context, target: Uri): Result<Int> = withContext(Dispatchers.IO) {
+        runCatching {
+            val payload = exportSourcesJson()
+            context.contentResolver.openOutputStream(target, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
+                it.write(payload)
+                it.flush()
+            } ?: error("Couldn't open that file for writing")
+            configs.value.size
+        }
+    }
+
+    suspend fun importSourcesFromUri(context: Context, source: Uri): Result<ImportResult> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val raw = context.contentResolver.openInputStream(source)
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.use { it.readText() }
+                    ?: error("Couldn't open that file")
+                importSourcesPayload(raw).getOrThrow()
+            }
+        }
+
+    /**
+     * Imports source settings from either a [SourcesBackup] JSON object, a JSON
+     * array of [SourceConfig], or plain HTTP/HTTPS addon URLs separated by
+     * newlines/spaces/commas. Merges into the active list so existing sources
+     * are preserved or refreshed by canonical URL without duplicates.
+     */
+    fun importSourcesPayload(raw: String): Result<ImportResult> = runCatching {
+        val trimmed = raw.trim()
+        require(trimmed.isNotEmpty()) { "Backup is empty" }
+
+        val incoming: List<SourceConfig> = if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            parseJsonImport(trimmed)
+        } else {
+            parseUrlImport(trimmed)
+        }
+        require(incoming.isNotEmpty()) { "No valid sources found in backup" }
+
+        var working = configs.value.toMutableList()
+        var added = 0
+        var updated = 0
+        var skipped = 0
+
+        for (rawEntry in incoming) {
+            if (rawEntry.kind == SourceKind.MODULE) {
+                skipped++
+                continue
+            }
+            if (!rawEntry.kind.needsServer) {
+                val idx = working.indexOfFirst { it.kind == rawEntry.kind }
+                val targetEnabled = if (rawEntry.kind == SourceKind.YOUTUBE) true else rawEntry.enabled
+                if (idx >= 0) {
+                    val cur = working[idx]
+                    if (cur.enabled != targetEnabled) {
+                        working[idx] = cur.copy(enabled = targetEnabled)
+                        updated++
+                    } else {
+                        skipped++
+                    }
+                } else {
+                    working.add(SourceConfig(kind = rawEntry.kind, enabled = targetEnabled))
+                    added++
+                }
+                continue
+            }
+
+            val parsedUrl = rawEntry.baseUrl.trim().toHttpUrlOrNull()
+            if (parsedUrl == null || (parsedUrl.scheme != "http" && parsedUrl.scheme != "https")) {
+                skipped++
+                continue
+            }
+            val cleaned = rawEntry.tidied()
+            val wantedCanonical = canonicalUrl(cleaned.baseUrl)
+            val existingIdx = working.indexOfFirst {
+                it.kind.needsServer && canonicalUrl(it.baseUrl) == wantedCanonical
+            }
+            if (existingIdx >= 0) {
+                val cur = working[existingIdx]
+                val merged = cur.copy(
+                    kind = cleaned.kind,
+                    baseUrl = cleaned.baseUrl,
+                    label = cleaned.label.ifBlank { cur.label },
+                    enabled = cleaned.enabled,
+                    allowDownloads = cleaned.allowDownloads,
+                    checkValidLossless = cleaned.checkValidLossless,
+                    qualityOptions = cleaned.qualityOptions.ifEmpty { cur.qualityOptions },
+                    pickedQuality = cleaned.pickedQuality ?: cur.pickedQuality,
+                    bitchordAuth = cleaned.bitchordAuth ?: cur.bitchordAuth,
+                )
+                if (merged != cur) {
+                    working[existingIdx] = merged
+                    updated++
+                } else {
+                    skipped++
+                }
+            } else {
+                val freshId = if (working.any { it.id == cleaned.id } || cleaned.id.isBlank()) {
+                    UUID.randomUUID().toString()
+                } else {
+                    cleaned.id
+                }
+                // User-added sources sit ahead of the built-in fixed sources.
+                val insertAt = working.indexOfLast { it.kind.isUserAdded } + 1
+                working.add(insertAt, cleaned.copy(id = freshId))
+                added++
+            }
+        }
+
+        if (added > 0 || updated > 0) {
+            val normalized = sourcesForInit(working, forceJioSaavnOff = false)
+                .let { list ->
+                    val userAdded = list.filter { it.kind.isUserAdded }
+                    val fixed = list.filterNot { it.kind.isUserAdded }.sortedBy { it.kind.rank }
+                    userAdded + fixed
+                }
+            publish(normalized)
+        }
+        ImportResult(added = added, updated = updated, skipped = skipped)
+    }
+
+    private fun parseJsonImport(raw: String): List<SourceConfig> {
+        val element = runCatching { json.parseToJsonElement(raw) }
+            .getOrElse { throw IllegalArgumentException("Invalid source backup JSON") }
+        val array: JsonArray = when (element) {
+            is JsonObject -> element["sources"] as? JsonArray
+                ?: throw IllegalArgumentException("Backup JSON has no sources list")
+            is JsonArray -> element
+            else -> throw IllegalArgumentException("Invalid source backup JSON")
+        }
+        return array.mapNotNull { entry ->
+            runCatching { json.decodeFromJsonElement(SourceConfig.serializer(), entry) }.getOrNull()
+        }
+    }
+
+    private fun parseUrlImport(raw: String): List<SourceConfig> =
+        raw.split('\n', '\r', ',', ' ', '\t')
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true) }
+            .mapNotNull { candidate ->
+                val http = candidate.toHttpUrlOrNull() ?: return@mapNotNull null
+                if (http.scheme != "http" && http.scheme != "https") return@mapNotNull null
+                SourceConfig(
+                    kind = SourceKind.ADDON,
+                    baseUrl = AddonClient.normalizeBase(candidate),
+                    enabled = true,
+                )
+            }
+            .toList()
+
     private val BUILT_IN_KINDS = listOf(SourceKind.JIOSAAVN, SourceKind.YOUTUBE)
+
+    const val PRESET_HIRES_ADDON_URL = "https://musify-hires-addon.vercel.app"
 
     private const val KEY_SOURCES = "sources"
     /** One-shot migration: existing users must explicitly opt in again. */

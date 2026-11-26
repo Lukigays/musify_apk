@@ -1434,4 +1434,21 @@
     <string name="bypass_lossless_output_check">Permitir addons em todas as saídas</string>
     <string name="bypass_lossless_output_check_subtitle">Reproduza e baixe de addons checkValidLossless também em alto-falantes e Bluetooth comum</string>
     <string name="bypass_lossless_output_check_footer">Quando ativado, o Musify ignora a restrição de saída de hardware checkValidLossless dos addons. Desative para exigir áudio cabeado, USB, HDMI ou LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
+    <string name="preset_hires_addon_title">Adicionar Musify Hi-Res · FLAC (Grátis)</string>
+    <string name="preset_hires_addon_subtitle">Predefinição em 1 toque · musify-hires-addon.vercel.app</string>
+    <string name="preset_hires_addon_adding">Conectando a Musify Hi-Res · FLAC…</string>
+    <string name="source_backup_header">Backup de fontes</string>
+    <string name="source_backup_footer">Salve URLs de complementos, ordem e opções em JSON ou cole links diretamente da área de transferência.</string>
+    <string name="source_backup_export">Exportar fontes</string>
+    <string name="source_backup_export_subtitle">Salvar complementos e fontes como JSON</string>
+    <string name="source_backup_exported">%1$d fontes exportadas</string>
+    <string name="source_backup_import">Importar fontes</string>
+    <string name="source_backup_import_subtitle">Mesclar complementos de um arquivo JSON ou lista de URLs</string>
+    <string name="source_backup_imported">%1$d nova(s) · %2$d atualizada(s)</string>
+    <string name="source_backup_copy">Copiar fontes</string>
+    <string name="source_backup_copy_subtitle">Copiar backup JSON para a área de transferência</string>
+    <string name="source_backup_copied">%1$d complemento(s) copiado(s)</string>
+    <string name="source_backup_paste">Colar fontes</string>
+    <string name="source_backup_paste_subtitle">Importar JSON ou URLs da área de transferência</string>
+    <string name="source_backup_clipboard_empty">Área de transferência vazia</string>
 </resources>

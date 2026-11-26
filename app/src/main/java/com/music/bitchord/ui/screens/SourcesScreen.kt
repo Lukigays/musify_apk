@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.icons.SfIcons
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -126,7 +128,50 @@ fun SourcesScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val configs by SourceRegistry.configs.collectAsStateWithLifecycle()
+    var installingPreset by remember { mutableStateOf(false) }
+    var presetError by remember { mutableStateOf<String?>(null) }
+    var backupExportStatus by remember { mutableStateOf<String?>(null) }
+    var backupImportStatus by remember { mutableStateOf<String?>(null) }
+    var clipboardStatus by remember { mutableStateOf<String?>(null) }
+
+    val exportSourcesPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { target ->
+        if (target == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            backupExportStatus = SourceRegistry.exportSourcesToUri(context, target).fold(
+                onSuccess = { count ->
+                    context.getString(R.string.source_backup_exported, count)
+                },
+                onFailure = {
+                    context.getString(
+                        R.string.export_failed,
+                        it.message ?: context.getString(R.string.unknown_error),
+                    )
+                },
+            )
+        }
+    }
+    val importSourcesPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            backupImportStatus = SourceRegistry.importSourcesFromUri(context, source).fold(
+                onSuccess = { res ->
+                    context.getString(R.string.source_backup_imported, res.added, res.updated)
+                },
+                onFailure = {
+                    context.getString(
+                        R.string.import_failed,
+                        it.message ?: context.getString(R.string.unknown_error),
+                    )
+                },
+            )
+        }
+    }
     val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
@@ -297,6 +342,25 @@ fun SourcesScreen(
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
             )
+            val hasPreset = remember(configs) { SourceRegistry.hasPresetAddon() }
+            if (!hasPreset) {
+                RowDivider()
+                PresetAddonRow(
+                    installing = installingPreset,
+                    error = presetError,
+                    onClick = {
+                        if (installingPreset) return@PresetAddonRow
+                        installingPreset = true
+                        presetError = null
+                        scope.launch {
+                            SourceRegistry.installPresetAddon().onFailure { err ->
+                                presetError = err.message ?: context.getString(R.string.failed)
+                            }
+                            installingPreset = false
+                        }
+                    },
+                )
+            }
         }
 
         // A personal library rather than a catalogue in the order above: it
@@ -391,6 +455,75 @@ fun SourcesScreen(
                     AppSettings.MAX_UPGRADE_LENGTH_SLACK_SECONDS.toFloat(),
                 steps = AppSettings.MAX_UPGRADE_LENGTH_SLACK_SECONDS -
                     AppSettings.MIN_UPGRADE_LENGTH_SLACK_SECONDS - 1,
+            )
+        }
+
+        SettingsGroup(
+            header = stringResource(R.string.source_backup_header),
+            footer = stringResource(R.string.source_backup_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.FileUpload,
+                title = stringResource(R.string.source_backup_export),
+                subtitle = backupExportStatus ?: stringResource(R.string.source_backup_export_subtitle),
+                onClick = {
+                    exportSourcesPicker.launch(SourceRegistry.suggestedBackupFilename())
+                },
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.FileDownload,
+                title = stringResource(R.string.source_backup_import),
+                subtitle = backupImportStatus ?: stringResource(R.string.source_backup_import_subtitle),
+                onClick = {
+                    importSourcesPicker.launch(arrayOf("application/json", "text/plain", "*/*"))
+                },
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.ContentCopy,
+                title = stringResource(R.string.source_backup_copy),
+                subtitle = clipboardStatus ?: stringResource(R.string.source_backup_copy_subtitle),
+                onClick = {
+                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(
+                        ClipData.newPlainText("Musify Sources", SourceRegistry.exportSourcesJson()),
+                    )
+                    clipboardStatus = context.getString(
+                        R.string.source_backup_copied,
+                        configs.count { it.kind.isUserAdded },
+                    )
+                },
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.Download,
+                title = stringResource(R.string.source_backup_paste),
+                subtitle = stringResource(R.string.source_backup_paste_subtitle),
+                onClick = {
+                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                    val clipText = clipboard?.primaryClip
+                        ?.takeIf { it.itemCount > 0 }
+                        ?.getItemAt(0)
+                        ?.coerceToText(context)
+                        ?.toString()
+                        .orEmpty()
+                    if (clipText.isBlank()) {
+                        backupImportStatus = context.getString(R.string.source_backup_clipboard_empty)
+                        return@SettingsRow
+                    }
+                    backupImportStatus = SourceRegistry.importSourcesPayload(clipText).fold(
+                        onSuccess = { res ->
+                            context.getString(R.string.source_backup_imported, res.added, res.updated)
+                        },
+                        onFailure = {
+                            context.getString(
+                                R.string.import_failed,
+                                it.message ?: context.getString(R.string.unknown_error),
+                            )
+                        },
+                    )
+                },
             )
         }
 
@@ -692,6 +825,48 @@ private fun AddSourceRow(onClick: () -> Unit) {
                 text = stringResource(R.string.add_addon_detail),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PresetAddonRow(
+    installing: Boolean,
+    error: String?,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !installing, onClick = onClick)
+            .heightIn(min = 60.dp)
+            .padding(horizontal = ROW_INSET, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(24.dp))
+        Icon(
+            imageVector = SfIcons.AutoAwesome,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(ICON_SIZE),
+        )
+        Spacer(Modifier.width(ICON_GAP))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.preset_hires_addon_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = when {
+                    installing -> stringResource(R.string.preset_hires_addon_adding)
+                    error != null -> error
+                    else -> stringResource(R.string.preset_hires_addon_subtitle)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
             )
         }

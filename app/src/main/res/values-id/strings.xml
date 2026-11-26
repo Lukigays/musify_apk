@@ -1406,4 +1406,21 @@
     <string name="bypass_lossless_output_check">Izinkan addon di semua output</string>
     <string name="bypass_lossless_output_check_subtitle">Putar dan unduh dari addon checkValidLossless di speaker maupun Bluetooth biasa</string>
     <string name="bypass_lossless_output_check_footer">Saat aktif, Musify mengabaikan pembatasan output perangkat keras checkValidLossless milik addon. Nonaktifkan untuk mewajibkan audio kabel, USB, HDMI, atau LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
+    <string name="preset_hires_addon_title">Tambah Musify Hi-Res · FLAC (Gratis)</string>
+    <string name="preset_hires_addon_subtitle">Preset 1-ketuk · musify-hires-addon.vercel.app</string>
+    <string name="preset_hires_addon_adding">Menghubungkan ke Musify Hi-Res · FLAC…</string>
+    <string name="source_backup_header">Cadangan Sumber</string>
+    <string name="source_backup_footer">Cadangkan URL addon, urutan, dan pengaturan sumber sebagai JSON, atau tempel tautan addon langsung dari papan klip.</string>
+    <string name="source_backup_export">Ekspor sumber</string>
+    <string name="source_backup_export_subtitle">Simpan addon dan sumber sebagai file JSON</string>
+    <string name="source_backup_exported">Mengekspor %1$d sumber</string>
+    <string name="source_backup_import">Impor sumber</string>
+    <string name="source_backup_import_subtitle">Gabungkan addon dari file JSON atau daftar URL</string>
+    <string name="source_backup_imported">Diimpor %1$d baru · %2$d diperbarui</string>
+    <string name="source_backup_copy">Salin sumber</string>
+    <string name="source_backup_copy_subtitle">Salin JSON cadangan sumber ke papan klip</string>
+    <string name="source_backup_copied">Menyalin %1$d addon ke papan klip</string>
+    <string name="source_backup_paste">Tempel sumber</string>
+    <string name="source_backup_paste_subtitle">Impor cadangan JSON atau URL addon dari papan klip</string>
+    <string name="source_backup_clipboard_empty">Papan klip kosong</string>
 </resources>

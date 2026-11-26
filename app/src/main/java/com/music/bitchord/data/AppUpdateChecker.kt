@@ -102,28 +102,35 @@ object AppUpdateChecker {
      *
      * so this app's APKs are the ones named with its own
      * [BuildConfig.UPDATE_APK_PREFIX] — "Musify-" never matches a TV file,
-     * since the prefix ends at the hyphen. The universal build (no `_ABI`
-     * suffix) is taken first, as it installs anywhere; failing that, the split
-     * for this device's ABI. A release with neither leaves
+     * since the prefix ends at the hyphen. The split matching this device's
+     * primary [Build.SUPPORTED_ABIS] is picked first (saving ~60 MB of
+     * native libraries for unused architectures); failing that, the universal
+     * build (no `_ABI` suffix). A release with neither leaves
      * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
      * page.
      */
-    private fun apkAssetUrl(release: JsonObject): String? = runCatching {
+    private fun apkAssetUrl(release: JsonObject): String? =
+        selectApkAssetUrl(release)
+
+    internal fun selectApkAssetUrl(
+        release: JsonObject,
+        prefix: String = BuildConfig.UPDATE_APK_PREFIX,
+        supportedAbis: List<String> = Build.SUPPORTED_ABIS.orEmpty().toList(),
+    ): String? = runCatching {
         val apks = release["assets"]?.jsonArray
             ?.mapNotNull { it as? JsonObject }
             ?.mapNotNull { asset ->
                 val name = asset["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 val url = asset["browser_download_url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                val ours = name.startsWith(BuildConfig.UPDATE_APK_PREFIX, ignoreCase = true) &&
+                val ours = name.startsWith(prefix, ignoreCase = true) &&
                     name.endsWith(".apk", ignoreCase = true) &&
                     asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
                 if (ours) name.removeSuffix(".apk").removeSuffix(".APK") to url else null
             }
             .orEmpty()
-        apks.firstOrNull { (name, _) -> '_' !in name }?.second
-            ?: Build.SUPPORTED_ABIS.firstNotNullOfOrNull { abi ->
-                apks.firstOrNull { (name, _) -> name.endsWith("_$abi") }?.second
-            }
+        supportedAbis.firstNotNullOfOrNull { abi ->
+            apks.firstOrNull { (name, _) -> name.endsWith("_$abi") }?.second
+        } ?: apks.firstOrNull { (name, _) -> '_' !in name }?.second
     }.getOrNull()
 
     /**

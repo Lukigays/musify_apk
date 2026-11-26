@@ -1431,4 +1431,21 @@
     <string name="bypass_lossless_output_check">Permitir addons en todas las salidas</string>
     <string name="bypass_lossless_output_check_subtitle">Reproduce y descarga desde addons checkValidLossless también en altavoces y Bluetooth estándar</string>
     <string name="bypass_lossless_output_check_footer">Si está activado, Musify ignora la restricción de salida de hardware checkValidLossless de los addons. Desactívalo para exigir audio por cable, USB, HDMI o LDAC/LHDC/aptX Lossless/SSC UHQ.</string>
+    <string name="preset_hires_addon_title">Añadir Musify Hi-Res · FLAC (Gratis)</string>
+    <string name="preset_hires_addon_subtitle">Ajuste en 1 toque · musify-hires-addon.vercel.app</string>
+    <string name="preset_hires_addon_adding">Conectando con Musify Hi-Res · FLAC…</string>
+    <string name="source_backup_header">Copia de fuentes</string>
+    <string name="source_backup_footer">Guarda tus URL de complementos, su orden y ajustes como JSON, o pega enlaces desde el portapapeles.</string>
+    <string name="source_backup_export">Exportar fuentes</string>
+    <string name="source_backup_export_subtitle">Guardar complementos y fuentes en JSON</string>
+    <string name="source_backup_exported">%1$d fuentes exportadas</string>
+    <string name="source_backup_import">Importar fuentes</string>
+    <string name="source_backup_import_subtitle">Combinar complementos desde un archivo JSON o lista de URL</string>
+    <string name="source_backup_imported">%1$d nuevas · %2$d actualizadas</string>
+    <string name="source_backup_copy">Copiar fuentes</string>
+    <string name="source_backup_copy_subtitle">Copiar la copia JSON al portapapeles</string>
+    <string name="source_backup_copied">%1$d complemento(s) copiado(s) al portapapeles</string>
+    <string name="source_backup_paste">Pegar fuentes</string>
+    <string name="source_backup_paste_subtitle">Importar respaldo JSON o URL desde el portapapeles</string>
+    <string name="source_backup_clipboard_empty">El portapapeles está vacío</string>
 </resources>
