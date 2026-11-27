@@ -1447,4 +1447,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Bant varispeed, nightcore ve oda yankısı</string>
+    <string name="audio_effects_settings_subtitle">Slowed + Reverb, Nightcore veya özel için tek dokunuş önayarlar</string>
+    <string name="audio_effect_off">Orijinal</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Özel</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%%%1$d Yankı</string>
+    <string name="playback_speed">Oynatma hızı</string>
+    <string name="pitch_linked_speed">Perdeyi hıza bağla (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Yalnızca tempoyu değil, hızla birlikte perdeyi de düşür veya yükselt</string>
+    <string name="room_reverb">Oda yankısı</string>
+    <string name="room_reverb_subtitle">Zengin stereo stüdyo ambiyansı</string>
+    <string name="reset_audio_effects">Ses efektlerini sıfırla</string>
 </resources>

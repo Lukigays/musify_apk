@@ -4,6 +4,7 @@ import android.util.Log
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.playback.EqualizerProcessor
 import com.music.bitchord.playback.LoudnessProcessor
+import com.music.bitchord.playback.RoomReverbProcessor
 import com.music.bitchord.playback.SpatialAudioProcessor
 import com.music.bitchord.playback.TransitionFilterProcessor
 
@@ -11,7 +12,7 @@ import com.music.bitchord.playback.TransitionFilterProcessor
  * Composite DSP chain executing BitChord's custom audio processors in their canonical sequence:
  *
  * AudioBlock(Float32) -> SpatialAudioProcessor -> EqualizerProcessor
- *   -> TransitionFilterProcessor -> LoudnessProcessor -> AudioBlock(Float32)
+ *   -> RoomReverbProcessor -> TransitionFilterProcessor -> LoudnessProcessor -> AudioBlock(Float32)
  *
  * Operates purely on in-place Float32 audio blocks without intermediate fixed-point quantization,
  * preserving full dynamic range and headroom.
@@ -27,13 +28,14 @@ import com.music.bitchord.playback.TransitionFilterProcessor
  *
  * Every stage here self-bypasses when its own setting is off, returning before
  * it reads a single sample rather than multiplying through by unity. With all
- * three idle the block leaves this class byte-identical to how it arrived,
+ * stages idle the block leaves this class byte-identical to how it arrived,
  * which is what lets [PcmBoundary]'s power-of-two scaling round-trip 16- and
  * 24-bit integers unchanged — see `PrecisionAudioSink.publishOutputExactness`.
  */
 class DspChain(
     val spatial: SpatialAudioProcessor = SpatialAudioProcessor(),
     val equalizer: EqualizerProcessor = EqualizerProcessor(),
+    val reverb: RoomReverbProcessor = RoomReverbProcessor(),
     val transition: TransitionFilterProcessor = TransitionFilterProcessor(),
     val loudness: LoudnessProcessor = LoudnessProcessor(),
 ) : FloatAudioProcessor {
@@ -45,6 +47,7 @@ class DspChain(
         this.currentSampleRate = sampleRate
         spatial.configure(sampleRate, channelCount)
         equalizer.configure(sampleRate, channelCount)
+        reverb.configure(sampleRate, channelCount)
         transition.configure(sampleRate, channelCount)
         loudness.configure(sampleRate, channelCount)
     }
@@ -66,11 +69,12 @@ class DspChain(
                     val sr = currentSampleRate
                     val spatialOn = spatial.enabled
                     val eqOn = equalizer.isEnabled
+                    val reverbOn = reverb.isEnabled
                     val transitionOn = transition.isFiltering
                     Log.d(
                         TAG,
                         "process() #$count frames=$frames sr=$sr " +
-                            "spatial=$spatialOn eq=$eqOn transition=$transitionOn",
+                            "spatial=$spatialOn eq=$eqOn reverb=$reverbOn transition=$transitionOn",
                     )
                 } catch (_: Throwable) {
                 }
@@ -79,10 +83,11 @@ class DspChain(
 
         spatial.process(block)
         equalizer.process(block)
+        reverb.process(block)
         transition.process(block)
-        // The equaliser and spatial widener leave their overs in place for the stages
-        // after them to see; the loudness stage's limiter is what catches whatever survives.
-        loudness.holdLimiter = equalizer.isShaping || spatial.enabled
+        // The equaliser, spatial widener, and reverb leave their overs in place for the
+        // stages after them to see; the loudness stage's limiter is what catches whatever survives.
+        loudness.holdLimiter = equalizer.isShaping || spatial.enabled || reverb.isEnabled
         loudness.process(block)
     }
 
@@ -90,6 +95,7 @@ class DspChain(
     override fun flush() {
         spatial.flush()
         equalizer.flush()
+        reverb.flush()
         transition.flush()
         loudness.flush()
     }
@@ -98,6 +104,7 @@ class DspChain(
         processCounter = 0L
         spatial.reset()
         equalizer.reset()
+        reverb.reset()
         transition.reset()
         loudness.reset()
     }

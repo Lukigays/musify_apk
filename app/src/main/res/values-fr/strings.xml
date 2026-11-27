@@ -1448,4 +1448,20 @@
     <string name="source_backup_paste">Coller les sources</string>
     <string name="source_backup_paste_subtitle">Importer un JSON ou des URL depuis le presse-papiers</string>
     <string name="source_backup_clipboard_empty">Le presse-papiers est vide</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Varispeed bande, nightcore et réverbération</string>
+    <string name="audio_effects_settings_subtitle">Préréglages en 1 geste pour Slowed + Reverb, Nightcore ou perso</string>
+    <string name="audio_effect_off">Original</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Personnalisé</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Réverb</string>
+    <string name="playback_speed">Vitesse de lecture</string>
+    <string name="pitch_linked_speed">Lier la hauteur (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Ajuste la hauteur avec la vitesse au lieu du tempo seul</string>
+    <string name="room_reverb">Réverbération de pièce</string>
+    <string name="room_reverb_subtitle">Ambiance studio stéréo enveloppante</string>
+    <string name="reset_audio_effects">Réinitialiser les effets audio</string>
 </resources>

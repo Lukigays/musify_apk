@@ -1460,4 +1460,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">테이프 배리스피드, 나이트코어 및 룸 리버브</string>
+    <string name="audio_effects_settings_subtitle">Slowed + Reverb, Nightcore 또는 사용자 지정 원탭 프리셋</string>
+    <string name="audio_effect_off">원본</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">사용자 지정</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">리버브 %1$d%%</string>
+    <string name="playback_speed">재생 속도</string>
+    <string name="pitch_linked_speed">음정 연동 (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">템포만 바꾸는 대신 속도에 맞춰 음정도 함께 조절합니다</string>
+    <string name="room_reverb">룸 리버브</string>
+    <string name="room_reverb_subtitle">풍부한 스테레오 스튜디오 공간감</string>
+    <string name="reset_audio_effects">오디오 효과 초기화</string>
 </resources>

@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
@@ -17,6 +18,8 @@ import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.AutoMixVisualFeed
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
+import com.music.bitchord.playback.VarispeedLayout
+import com.music.bitchord.playback.VarispeedPreset
 import com.music.bitchord.ui.player.AutoMixArtworkPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -449,6 +452,20 @@ object AppSettings {
     val equalizerPreset = MutableStateFlow(EqualizerPreset.FLAT)
 
     val playbackSpeed = MutableStateFlow(1.0f)
+
+    /**
+     * When true, pitch moves proportionally with [playbackSpeed] (tape/vinyl
+     * varispeed): 0.85x lowers pitch for Slowed + Reverb, 1.22x raises pitch
+     * for Nightcore / Sped Up. When false, Media3 time-stretches at 1.0x pitch.
+     */
+    val pitchLinkedSpeed = MutableStateFlow(false)
+
+    /** Warm Float32 room reverb wet mix in `0f..1f` (`0f` = byte-exact bypass). */
+    val roomReverb = MutableStateFlow(0f)
+
+    /** Active preset derived from [playbackSpeed], [pitchLinkedSpeed], and [roomReverb]. */
+    val varispeedPreset = MutableStateFlow(VarispeedPreset.OFF)
+
     val themeMode = MutableStateFlow(ThemeMode.DARK)
     val appFont = MutableStateFlow(AppFont.DEFAULT)
 
@@ -1104,7 +1121,10 @@ object AppSettings {
         equalizerBalance.value = prefs.getFloat(KEY_EQ_BALANCE, 0f).coerceIn(-1f, 1f)
         equalizerBands.value = readEqualizerBands()
         equalizerPreset.value = EqualizerPreset.matching(equalizerBands.value)
-        playbackSpeed.value = prefs.getFloat(KEY_SPEED, 1.0f)
+        playbackSpeed.value = VarispeedLayout.clampRawSpeed(prefs.getFloat(KEY_SPEED, 1.0f))
+        pitchLinkedSpeed.value = prefs.getBoolean(KEY_PITCH_LINKED_SPEED, false)
+        roomReverb.value = VarispeedLayout.clampReverb(prefs.getFloat(KEY_ROOM_REVERB, 0f))
+        refreshVarispeedPreset()
         themeMode.value = runCatching {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "DARK")
         }.getOrDefault(ThemeMode.DARK)
@@ -1538,8 +1558,58 @@ object AppSettings {
     }
 
     fun setPlaybackSpeed(value: Float) {
-        playbackSpeed.value = value
-        prefs.edit().putFloat(KEY_SPEED, value).apply()
+        val clamped = VarispeedLayout.clampRawSpeed(value)
+        playbackSpeed.value = clamped
+        refreshVarispeedPreset()
+        if (::prefs.isInitialized) prefs.edit().putFloat(KEY_SPEED, clamped).apply()
+    }
+
+    fun setPitchLinkedSpeed(value: Boolean) {
+        pitchLinkedSpeed.value = value
+        refreshVarispeedPreset()
+        if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_PITCH_LINKED_SPEED, value).apply()
+    }
+
+    fun setRoomReverb(value: Float) {
+        val clamped = VarispeedLayout.clampReverb(value)
+        roomReverb.value = clamped
+        refreshVarispeedPreset()
+        if (::prefs.isInitialized) prefs.edit().putFloat(KEY_ROOM_REVERB, clamped).apply()
+    }
+
+    /** Applies one of the named presets ([VarispeedPreset.CUSTOM] is derived, so ignored). */
+    fun applyVarispeedPreset(preset: VarispeedPreset) {
+        if (preset == VarispeedPreset.CUSTOM) return
+        playbackSpeed.value = preset.speed
+        pitchLinkedSpeed.value = preset.pitchLinked
+        roomReverb.value = preset.reverb
+        refreshVarispeedPreset()
+        if (::prefs.isInitialized) {
+            prefs.edit()
+                .putFloat(KEY_SPEED, preset.speed)
+                .putBoolean(KEY_PITCH_LINKED_SPEED, preset.pitchLinked)
+                .putFloat(KEY_ROOM_REVERB, preset.reverb)
+                .apply()
+        }
+    }
+
+    fun resetAudioEffects() = applyVarispeedPreset(VarispeedPreset.OFF)
+
+    fun playbackParametersFor(
+        speed: Float = playbackSpeed.value,
+        pitchLinked: Boolean = pitchLinkedSpeed.value,
+    ): PlaybackParameters {
+        val safeSpeed = speed.takeIf { it.isFinite() }?.coerceIn(0.1f, 4.0f) ?: 1.0f
+        val safePitch = if (pitchLinked) safeSpeed else 1.0f
+        return PlaybackParameters(safeSpeed, safePitch)
+    }
+
+    private fun refreshVarispeedPreset() {
+        varispeedPreset.value = VarispeedPreset.matching(
+            speed = playbackSpeed.value,
+            pitchLinked = pitchLinkedSpeed.value,
+            reverb = roomReverb.value,
+        )
     }
 
     fun setShowNerdStats(value: Boolean) {
@@ -2462,6 +2532,8 @@ object AppSettings {
     private const val KEY_EQ_BALANCE = "equalizer_balance"
     private const val KEY_EQ_BANDS = "equalizer_bands"
     private const val KEY_SPEED = "playback_speed"
+    private const val KEY_PITCH_LINKED_SPEED = "pitch_linked_speed"
+    private const val KEY_ROOM_REVERB = "room_reverb"
     private const val KEY_THEME = "theme_mode"
     private const val KEY_APP_FONT = "app_font"
     private const val KEY_AUTOPLAY = "autoplay"

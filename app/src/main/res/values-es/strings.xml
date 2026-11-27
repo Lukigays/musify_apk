@@ -1448,4 +1448,20 @@
     <string name="source_backup_paste">Pegar fuentes</string>
     <string name="source_backup_paste_subtitle">Importar respaldo JSON o URL desde el portapapeles</string>
     <string name="source_backup_clipboard_empty">El portapapeles está vacío</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Varispeed de cinta, nightcore y reverberación</string>
+    <string name="audio_effects_settings_subtitle">Ajustes rápidos para Slowed + Reverb, Nightcore o personalizado</string>
+    <string name="audio_effect_off">Original</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Personalizado</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Reverb</string>
+    <string name="playback_speed">Velocidad de reproducción</string>
+    <string name="pitch_linked_speed">Vincular tono (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Sube o baja el tono junto con la velocidad en vez de solo el tempo</string>
+    <string name="room_reverb">Reverberación de sala</string>
+    <string name="room_reverb_subtitle">Ambiente estéreo cálido de estudio</string>
+    <string name="reset_audio_effects">Restablecer efectos de audio</string>
 </resources>

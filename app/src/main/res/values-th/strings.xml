@@ -1423,4 +1423,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">วาริสปีด, ไนท์คอร์ และเสียงก้องห้อง</string>
+    <string name="audio_effects_settings_subtitle">พรีเซ็ตแตะครั้งเดียวสำหรับ Slowed + Reverb, Nightcore หรือกำหนดเอง</string>
+    <string name="audio_effect_off">ต้นฉบับ</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">กำหนดเอง</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">เสียงก้อง %1$d%%</string>
+    <string name="playback_speed">ความเร็วในการเล่น</string>
+    <string name="pitch_linked_speed">เชื่อมระดับเสียงตามความเร็ว (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">ปรับระดับเสียงสูงต่ำตามความเร็วแทนการคงระดับเสียงเดิม</string>
+    <string name="room_reverb">เสียงก้องห้อง</string>
+    <string name="room_reverb_subtitle">บรรยากาศห้องสตูดิโอสเตอริโอ</string>
+    <string name="reset_audio_effects">รีเซ็ตเอฟเฟกต์เสียง</string>
 </resources>

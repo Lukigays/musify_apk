@@ -1423,4 +1423,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">磁帶變速變調、Nightcore 與房間殘響</string>
+    <string name="audio_effects_settings_subtitle">一鍵切換 Slowed + Reverb、Nightcore 或自訂</string>
+    <string name="audio_effect_off">原聲</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">自訂</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% 殘響</string>
+    <string name="playback_speed">播放速度</string>
+    <string name="pitch_linked_speed">音高連動速度 (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">隨播放速度同步升降音高，而非僅改變節拍快慢</string>
+    <string name="room_reverb">房間殘響</string>
+    <string name="room_reverb_subtitle">溫潤立體聲錄音室空間感</string>
+    <string name="reset_audio_effects">重設音效</string>
 </resources>

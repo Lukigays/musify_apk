@@ -1447,4 +1447,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">टेप वैरीस्पीड, नाइटकोर और रूम रीवरब</string>
+    <string name="audio_effects_settings_subtitle">Slowed + Reverb, Nightcore या कस्टम के लिए 1-टैप प्रीसेट</string>
+    <string name="audio_effect_off">मूल</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">कस्टम</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% रीवरब</string>
+    <string name="playback_speed">प्लेबैक गति</string>
+    <string name="pitch_linked_speed">पिच को गति से जोड़ें (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">केवल टेम्पो के बजाय गति के साथ पिच भी बदलें</string>
+    <string name="room_reverb">रूम रीवरब</string>
+    <string name="room_reverb_subtitle">सुखद स्टीरियो स्टूडियो एम्बिएंस</string>
+    <string name="reset_audio_effects">ऑडियो प्रभाव रीसेट करें</string>
 </resources>

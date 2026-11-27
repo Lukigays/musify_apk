@@ -1481,4 +1481,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Плёночный вариспид, найткор и реверберация</string>
+    <string name="audio_effects_settings_subtitle">Быстрые режимы Slowed + Reverb, Nightcore или свой вариант</string>
+    <string name="audio_effect_off">Оригинал</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Свой</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">Реверб %1$d%%</string>
+    <string name="playback_speed">Скорость воспроизведения</string>
+    <string name="pitch_linked_speed">Связать высоту тона (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Менять высоту тона вместе со скоростью, а не только темп</string>
+    <string name="room_reverb">Реверберация комнаты</string>
+    <string name="room_reverb_subtitle">Мягкое стереозвучание студии</string>
+    <string name="reset_audio_effects">Сбросить аудиоэффекты</string>
 </resources>

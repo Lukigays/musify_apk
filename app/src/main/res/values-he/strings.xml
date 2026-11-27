@@ -1451,4 +1451,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">שינוי מהירות וגובה צליל, נייטקור והד חדר</string>
+    <string name="audio_effects_settings_subtitle">קביעות מהירות ל-Slowed + Reverb, Nightcore או התאמה אישית</string>
+    <string name="audio_effect_off">מקורי</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">מותאם אישית</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% הד</string>
+    <string name="playback_speed">מהירות ניגון</string>
+    <string name="pitch_linked_speed">קישור גובה צליל (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">הנמכת או העלאת גובה הצליל יחד עם המהירות</string>
+    <string name="room_reverb">הד חדר</string>
+    <string name="room_reverb_subtitle">אווירת אולפן סטריאו עשירה</string>
+    <string name="reset_audio_effects">איפוס אפקטי שמע</string>
 </resources>

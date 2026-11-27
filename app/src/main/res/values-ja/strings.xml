@@ -1423,4 +1423,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">テープバリスピード、ナイトコア、ルームリバーブ</string>
+    <string name="audio_effects_settings_subtitle">Slowed + ReverbやNightcoreをワンタップで切り替え</string>
+    <string name="audio_effect_off">オリジナル</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">カスタム</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">リバーブ %1$d%%</string>
+    <string name="playback_speed">再生速度</string>
+    <string name="pitch_linked_speed">ピッチを速度に連動 (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">テンポだけでなく速度に合わせて音程も上下させます</string>
+    <string name="room_reverb">ルームリバーブ</string>
+    <string name="room_reverb_subtitle">豊かなステレオスタジオ残響</string>
+    <string name="reset_audio_effects">オーディオエフェクトをリセット</string>
 </resources>

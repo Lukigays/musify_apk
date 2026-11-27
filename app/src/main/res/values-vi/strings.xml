@@ -1423,4 +1423,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Varispeed băng từ, nightcore và vang phòng</string>
+    <string name="audio_effects_settings_subtitle">Cài đặt nhanh 1 chạm cho Slowed + Reverb, Nightcore hoặc tùy chỉnh</string>
+    <string name="audio_effect_off">Gốc</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Tùy chỉnh</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">Vang %1$d%%</string>
+    <string name="playback_speed">Tốc độ phát</string>
+    <string name="pitch_linked_speed">Liên kết cao độ (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Tăng hoặc giảm cao độ theo tốc độ thay vì chỉ đổi nhịp độ</string>
+    <string name="room_reverb">Vang phòng</string>
+    <string name="room_reverb_subtitle">Không gian phòng thu stereo ấm áp</string>
+    <string name="reset_audio_effects">Đặt lại hiệu ứng âm thanh</string>
 </resources>

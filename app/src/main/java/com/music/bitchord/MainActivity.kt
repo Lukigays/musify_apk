@@ -4903,6 +4903,7 @@ private fun BitChordApp(
                 // looked up as the menu opens — see `needsLinks` above.
                 resolvingLinks = if (fromPlayer && !fromQueue) linksLoading else needsLinks && menuLinksLoading,
                 showSleepTimer = fromPlayer && !fromQueue,
+                showAudioEffects = fromPlayer && !fromQueue,
                 // Offered for every playing track with a YouTube upload
                 // behind it, not only for one an upgrade visibly swapped:
                 // a source ranked above YouTube can be playing its own

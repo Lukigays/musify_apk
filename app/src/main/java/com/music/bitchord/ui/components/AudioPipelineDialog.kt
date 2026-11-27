@@ -110,6 +110,8 @@ private fun bitExactVerdict(
     loudnessActive: Boolean,
     eqActive: Boolean,
     spatialActive: Boolean,
+    reverbActive: Boolean,
+    speedActive: Boolean,
 ): String = when {
     // Not a fault to fix: there is no DSD output path (native DSD or DoP)
     // here, so the PCM conversion is a deviation every DSD track carries,
@@ -125,6 +127,8 @@ private fun bitExactVerdict(
     loudnessActive -> "No — loudness normalization"
     eqActive -> "No — equalizer"
     spatialActive -> "No — spatial audio"
+    reverbActive -> "No — room reverb"
+    speedActive -> "No — playback speed"
     outputExact -> "Yes${outputExactDetail?.let { " ($it)" }.orEmpty()}"
     else -> "No — ${outputExactDetail ?: "converted downstream"}"
 }
@@ -156,6 +160,9 @@ fun AudioPipelineDialog(
     val eqEnabled by AppSettings.equalizerEnabled.collectAsStateWithLifecycle()
     val eqPreset by AppSettings.equalizerPreset.collectAsStateWithLifecycle()
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
+    val roomReverb by AppSettings.roomReverb.collectAsStateWithLifecycle()
+    val playbackSpeed by AppSettings.playbackSpeed.collectAsStateWithLifecycle()
+    val pitchLinkedSpeed by AppSettings.pitchLinkedSpeed.collectAsStateWithLifecycle()
     val loudnessNormalization by AppSettings.loudnessNormalization.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -377,6 +384,18 @@ fun AudioPipelineDialog(
                 "Flat"
             }
             val stereoExpandText = if (spatialAudio) "250%" else "100%"
+            val reverbText = if (roomReverb > 0.005f) {
+                "${(roomReverb * 100f).toInt()}%"
+            } else {
+                stringResource(R.string.off)
+            }
+            val varispeedText = if (pitchLinkedSpeed) {
+                String.format(Locale.ROOT, "%.2fx (Pitch-linked)", playbackSpeed)
+            } else if (kotlin.math.abs(playbackSpeed - 1f) >= 0.005f) {
+                String.format(Locale.ROOT, "%.2fx (Tempo only)", playbackSpeed)
+            } else {
+                "1.00x"
+            }
             val buffersText = outputStatus.bufferSize?.let { size ->
                 val rate = outputStatus.actualSampleRateHz
                 val bytesPerSample = when (outputStatus.actualEncoding) {
@@ -425,6 +444,8 @@ fun AudioPipelineDialog(
                 PipelineRow(stringResource(R.string.pipeline_loudness_measured), loudnessMeasuredText)
                 PipelineRow(stringResource(R.string.pipeline_eq_preset), eqPresetText)
                 PipelineRow(stringResource(R.string.pipeline_stereo_expand), stereoExpandText)
+                PipelineRow(stringResource(R.string.room_reverb), reverbText)
+                PipelineRow(stringResource(R.string.playback_speed), varispeedText)
                 PipelineRow(stringResource(R.string.pipeline_buffers), buffersText)
                 PipelineRow(stringResource(R.string.pipeline_output_api), outputStatus.sink.ifBlank { "AAudio" })
                 // The verdict, rather than the settings. Names whichever
@@ -442,6 +463,8 @@ fun AudioPipelineDialog(
                         loudnessActive = loudnessNormalization && outputStatus.loudnessGainDb != null,
                         eqActive = eqEnabled,
                         spatialActive = spatialAudio,
+                        reverbActive = roomReverb > 0.005f,
+                        speedActive = kotlin.math.abs(playbackSpeed - 1f) >= 0.005f,
                     ),
                 )
             }

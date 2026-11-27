@@ -1423,4 +1423,20 @@
     <string name="source_backup_paste">Tempel sumber</string>
     <string name="source_backup_paste_subtitle">Impor cadangan JSON atau URL addon dari papan klip</string>
     <string name="source_backup_clipboard_empty">Papan klip kosong</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Varispeed pita, nightcore, dan gema ruang</string>
+    <string name="audio_effects_settings_subtitle">Preset 1-ketuk untuk Slowed + Reverb, Nightcore, atau kustom</string>
+    <string name="audio_effect_off">Asli</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Kustom</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Reverb</string>
+    <string name="playback_speed">Kecepatan pemutaran</string>
+    <string name="pitch_linked_speed">Tautkan nada (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Turunkan atau naikkan nada mengikuti kecepatan, bukan tempo saja</string>
+    <string name="room_reverb">Gema ruang</string>
+    <string name="room_reverb_subtitle">Nuansa studio stereo yang lembut</string>
+    <string name="reset_audio_effects">Atur ulang efek audio</string>
 </resources>

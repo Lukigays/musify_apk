@@ -181,6 +181,8 @@ import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
+import com.music.bitchord.playback.VarispeedLayout
+import com.music.bitchord.playback.VarispeedPreset
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -254,6 +256,10 @@ fun SettingsScreen(
     // which caches the codec-list walk for the life of the process.
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
+    val playbackSpeed by AppSettings.playbackSpeed.collectAsStateWithLifecycle()
+    val pitchLinkedSpeed by AppSettings.pitchLinkedSpeed.collectAsStateWithLifecycle()
+    val roomReverb by AppSettings.roomReverb.collectAsStateWithLifecycle()
+    val varispeedPreset by AppSettings.varispeedPreset.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val bestPart by AppSettings.showBestPart.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
@@ -1030,6 +1036,104 @@ fun SettingsScreen(
                         title = equalizerTitle,
                         subtitle = stringResource(R.string.equalizer_subtitle),
                         onClick = onEqualizer,
+                    )
+                }
+            }
+            val audioEffectsTitle = stringResource(R.string.audio_effects_menu)
+            val audioEffectsPresets = VarispeedPreset.SELECTABLE
+            val presetLabels = listOf(
+                stringResource(R.string.audio_effect_off),
+                stringResource(R.string.audio_effect_slowed_reverb),
+                stringResource(R.string.audio_effect_nightcore),
+                stringResource(R.string.audio_effect_sped_up_reverb),
+            )
+            row(audioEffectsTitle, "slowed", "reverb", "nightcore", "sped up", "varispeed", "pitch", "speed") {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = ROW_INSET, end = ROW_INSET, top = 12.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = SfIcons.Waves,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(ICON_SIZE),
+                            )
+                            Spacer(Modifier.width(ICON_GAP))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = audioEffectsTitle,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                                Text(
+                                    text = stringResource(R.string.audio_effects_settings_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        SegmentedControl(
+                            options = presetLabels,
+                            selectedIndex = audioEffectsPresets.indexOf(varispeedPreset),
+                            onSelect = { index ->
+                                audioEffectsPresets.getOrNull(index)?.let(AppSettings::applyVarispeedPreset)
+                            },
+                            modifier = Modifier.padding(
+                                start = ROW_INSET + ICON_SIZE + ICON_GAP,
+                                end = ROW_INSET,
+                                bottom = 8.dp,
+                            ),
+                        )
+                    }
+                }
+            }
+            val playbackSpeedTitle = stringResource(R.string.playback_speed)
+            row(playbackSpeedTitle, "speed", "tempo", "slowed", "nightcore", "varispeed", divided = false) {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SliderRow(
+                        icon = SfIcons.GraphicEq,
+                        title = playbackSpeedTitle,
+                        value = String.format(Locale.ROOT, "%.2fx", playbackSpeed),
+                        sliderValue = playbackSpeed,
+                        onSliderValue = { value ->
+                            val snapped = (value * 20f).roundToInt() / 20f
+                            AppSettings.setPlaybackSpeed(VarispeedLayout.clampSpeed(snapped))
+                        },
+                        valueRange = VarispeedLayout.MIN_SPEED..VarispeedLayout.MAX_SPEED,
+                        steps = 0,
+                    )
+                }
+            }
+            val pitchLinkedTitle = stringResource(R.string.pitch_linked_speed)
+            row(pitchLinkedTitle, "pitch", "varispeed", "slowed", "nightcore", divided = false) {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SettingsSubRow(
+                        title = pitchLinkedTitle,
+                        subtitle = stringResource(R.string.pitch_linked_speed_subtitle),
+                        checked = pitchLinkedSpeed,
+                        onCheckedChange = AppSettings::setPitchLinkedSpeed,
+                    )
+                }
+            }
+            val roomReverbTitle = stringResource(R.string.room_reverb)
+            row(roomReverbTitle, "reverb", "slowed", "room", "echo", "hall", divided = false) {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SliderRow(
+                        icon = SfIcons.Waves,
+                        title = roomReverbTitle,
+                        subtitle = stringResource(R.string.room_reverb_subtitle),
+                        value = "${(roomReverb * 100f).roundToInt()}%",
+                        sliderValue = roomReverb,
+                        onSliderValue = { value ->
+                            val snapped = (value * 20f).roundToInt() / 20f
+                            AppSettings.setRoomReverb(snapped.coerceIn(0f, 1f))
+                        },
+                        valueRange = 0f..1f,
+                        steps = 0,
                     )
                 }
             }

@@ -672,6 +672,8 @@ class PlaybackService : MediaLibraryService() {
     private val spatialAudioProcessorB = SpatialAudioProcessor()
     private val equalizerProcessorA = EqualizerProcessor()
     private val equalizerProcessorB = EqualizerProcessor()
+    private val roomReverbA = RoomReverbProcessor()
+    private val roomReverbB = RoomReverbProcessor()
     private val transitionFilterA = TransitionFilterProcessor()
     private val transitionFilterB = TransitionFilterProcessor()
 
@@ -1916,6 +1918,7 @@ class PlaybackService : MediaLibraryService() {
         val exoPlayer = buildPlayer(
             spatialAudioProcessorA,
             equalizerProcessorA,
+            roomReverbA,
             transitionFilterA,
             loudnessA,
             ownsSession = true,
@@ -1923,6 +1926,7 @@ class PlaybackService : MediaLibraryService() {
         val sparePlayer = buildPlayer(
             spatialAudioProcessorB,
             equalizerProcessorB,
+            roomReverbB,
             transitionFilterB,
             loudnessB,
             ownsSession = false,
@@ -1940,6 +1944,7 @@ class PlaybackService : MediaLibraryService() {
         AppSettings.audioSessionId.value = exoPlayer.audioSessionId
         applySettings(exoPlayer)
         applySettings(sparePlayer)
+        applyRoomReverb()
         observeSettings()
         observeScrobbling()
         observeDiscord()
@@ -2555,7 +2560,7 @@ class PlaybackService : MediaLibraryService() {
             // The listener's speed, not the active player's: straight after an
             // Advanced Automix blend the active player is still easing off its
             // beatmatch stretch, and copying that would keep it for good.
-            standbyPlayer.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+            standbyPlayer.playbackParameters = AppSettings.playbackParametersFor()
             standbyPlayer.volume = 0f
             standbyPlayer.setMediaItems(newItems, currentIndex, alignedStartPos)
             spareLoudness().track(mediaId, nextMediaIdOf(standbyPlayer))
@@ -4174,11 +4179,12 @@ class PlaybackService : MediaLibraryService() {
     private fun buildPlayer(
         spatial: SpatialAudioProcessor,
         equalizer: EqualizerProcessor,
+        reverb: RoomReverbProcessor,
         filter: TransitionFilterProcessor,
         loudness: LoudnessProcessor,
         ownsSession: Boolean,
     ): ExoPlayer = ExoPlayer.Builder(this)
-        .setRenderersFactory(silenceSkippingRenderers(spatial, equalizer, filter, loudness))
+        .setRenderersFactory(silenceSkippingRenderers(spatial, equalizer, reverb, filter, loudness))
         .setMediaSourceFactory(requireNotNull(mediaSourceFactory))
         .setLoadControl(farBufferingLoadControl())
         .setAudioAttributes(AUDIO_ATTRIBUTES, /* handleAudioFocus = */ ownsSession)
@@ -7564,6 +7570,7 @@ class PlaybackService : MediaLibraryService() {
     private fun silenceSkippingRenderers(
         spatial: SpatialAudioProcessor,
         equalizer: EqualizerProcessor,
+        reverb: RoomReverbProcessor,
         transition: TransitionFilterProcessor,
         loudness: LoudnessProcessor,
     ) = object : FfmpegFallbackRenderersFactory(this) {
@@ -7646,7 +7653,7 @@ class PlaybackService : MediaLibraryService() {
             // them for the same reason: it belongs to the listener and
             // the whole session, while the transition filter belongs to
             // one handoff and has to have the last word on it.
-            val dspChain = DspChain(spatial, equalizer, transition, loudness)
+            val dspChain = DspChain(spatial, equalizer, reverb, transition, loudness)
             val precision = PrecisionAudioSink(
                 delegate = defaultSink,
                 dspChain = dspChain,
@@ -7672,7 +7679,7 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun applySettings(player: ExoPlayer) {
         player.skipSilenceEnabled = AppSettings.skipSilence.value
-        player.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+        player.playbackParameters = AppSettings.playbackParametersFor()
         // Restore persisted shuffle and repeat states on startup. Assign both
         // values: Android can destroy and recreate the service while retaining
         // this process, so QueueShuffle's process-wide object may still hold
@@ -7900,6 +7907,7 @@ class PlaybackService : MediaLibraryService() {
         val newActive = buildPlayer(
             spatialAudioProcessorA,
             equalizerProcessorA,
+            roomReverbA,
             transitionFilterA,
             loudnessA,
             ownsSession = true,
@@ -7907,6 +7915,7 @@ class PlaybackService : MediaLibraryService() {
         val newSpare = buildPlayer(
             spatialAudioProcessorB,
             equalizerProcessorB,
+            roomReverbB,
             transitionFilterB,
             loudnessB,
             ownsSession = false,
@@ -7920,6 +7929,7 @@ class PlaybackService : MediaLibraryService() {
         newActive.repeatMode = repeatMode
         applyEqualizer()
         applySpatialAudioEnabled()
+        applyRoomReverb()
         if (items.isNotEmpty()) {
             newActive.setMediaItems(items, index.coerceIn(items.indices), position)
             // By hand, because the listener is attached below this: the
@@ -8095,10 +8105,18 @@ class PlaybackService : MediaLibraryService() {
             // raw value over it would drop the incoming track back to its own
             // tempo halfway through a blend. The controller re-reads the setting
             // when it restores the rate, so the change still lands.
-            AppSettings.playbackSpeed.collect { speed ->
+            combine(
+                AppSettings.playbackSpeed,
+                AppSettings.pitchLinkedSpeed,
+            ) { speed, pitchLinked -> speed to pitchLinked }.collect { (speed, pitchLinked) ->
                 if (crossfade?.isTransitioning() == true) return@collect
-                crossfade?.applyPlaybackSpeed(speed) ?: eachPlayer { it.setPlaybackSpeed(speed) }
+                crossfade?.applyPlaybackSpeed(speed) ?: eachPlayer {
+                    it.playbackParameters = AppSettings.playbackParametersFor(speed, pitchLinked)
+                }
             }
+        }
+        scope.launch {
+            AppSettings.roomReverb.collect { applyRoomReverb() }
         }
         scope.launch {
             lyricsSettingChanges(
@@ -8187,6 +8205,12 @@ class PlaybackService : MediaLibraryService() {
         val enabled = AppSettings.spatialAudio.value && !activeTrackIsDolbyAtmos
         spatialAudioProcessorA.enabled = enabled
         spatialAudioProcessorB.enabled = enabled
+    }
+
+    private fun applyRoomReverb() {
+        val mix = AppSettings.roomReverb.value
+        roomReverbA.wetMix = mix
+        roomReverbB.wetMix = mix
     }
 
     /**

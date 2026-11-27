@@ -1486,4 +1486,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Varispeed taśmowy, nightcore i pogłos pokoju</string>
+    <string name="audio_effects_settings_subtitle">Szybkie tryby Slowed + Reverb, Nightcore lub własne</string>
+    <string name="audio_effect_off">Oryginał</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Własny</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Pogłos</string>
+    <string name="playback_speed">Prędkość odtwarzania</string>
+    <string name="pitch_linked_speed">Połącz wysokość (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Obniża lub podnosi tonację razem z prędkością</string>
+    <string name="room_reverb">Pogłos pokoju</string>
+    <string name="room_reverb_subtitle">Bogate brzmienie studyjnego pogłosu stereo</string>
+    <string name="reset_audio_effects">Resetuj efekty dźwięku</string>
 </resources>

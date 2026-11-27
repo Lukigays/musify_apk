@@ -1447,4 +1447,20 @@
     <string name="source_backup_paste">Quellen einfügen</string>
     <string name="source_backup_paste_subtitle">JSON-Sicherung oder URLs aus Zwischenablage importieren</string>
     <string name="source_backup_clipboard_empty">Zwischenablage ist leer</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Tape-Varispeed, Nightcore und Raumhall</string>
+    <string name="audio_effects_settings_subtitle">1-Tipp-Voreinstellungen für Slowed + Reverb, Nightcore oder Eigene</string>
+    <string name="audio_effect_off">Original</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Eigene</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Hall</string>
+    <string name="playback_speed">Wiedergabegeschwindigkeit</string>
+    <string name="pitch_linked_speed">Tonhöhe koppeln (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Tonhöhe mit der Geschwindigkeit senken oder anheben</string>
+    <string name="room_reverb">Raumhall</string>
+    <string name="room_reverb_subtitle">Warme Stereo-Studioakustik</string>
+    <string name="reset_audio_effects">Audioeffekte zurücksetzen</string>
 </resources>

@@ -1557,4 +1557,20 @@
     <string name="source_backup_paste">Paste sources</string>
     <string name="source_backup_paste_subtitle">Import JSON backup or addon URLs from clipboard</string>
     <string name="source_backup_clipboard_empty">Clipboard is empty</string>
+    <string name="audio_effects_menu">Slowed + Reverb</string>
+    <string name="audio_effects_subtitle_idle">Tape varispeed, nightcore, and room reverb</string>
+    <string name="audio_effects_settings_subtitle">1-tap presets for Slowed + Reverb, Nightcore, or custom</string>
+    <string name="audio_effect_off">Original</string>
+    <string name="audio_effect_slowed_reverb">Slowed + Reverb</string>
+    <string name="audio_effect_nightcore">Nightcore</string>
+    <string name="audio_effect_sped_up_reverb">Sped Up</string>
+    <string name="audio_effect_custom">Custom</string>
+    <string name="audio_effect_varispeed_short">Varispeed</string>
+    <string name="audio_effect_reverb_percent">%1$d%% Reverb</string>
+    <string name="playback_speed">Playback speed</string>
+    <string name="pitch_linked_speed">Link pitch (Varispeed)</string>
+    <string name="pitch_linked_speed_subtitle">Drop or raise pitch with speed instead of keeping tempo only</string>
+    <string name="room_reverb">Room reverb</string>
+    <string name="room_reverb_subtitle">Lush stereo studio ambience</string>
+    <string name="reset_audio_effects">Reset audio effects</string>
 </resources>

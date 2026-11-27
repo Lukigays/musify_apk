@@ -67,12 +67,17 @@ import com.music.bitchord.data.webdav.WebDavUploads
 import com.music.bitchord.download.DownloadState
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.playback.SleepTimer
+import com.music.bitchord.playback.VarispeedLayout
+import com.music.bitchord.playback.VarispeedPreset
+import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.theme.ArtworkPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Long-press menu for a track, in the shape music apps normally use.
@@ -135,6 +140,12 @@ fun SongActionsMenu(
     onRemoveFromHistory: (() -> Unit)? = null,
     showSleepTimer: Boolean = false,
     /**
+     * Shows the real-time Varispeed (pitch-linked speed) and Room Reverb
+     * picker on the main player's menu so Slowed + Reverb and Nightcore can
+     * be toggled without leaving playback.
+     */
+    showAudioEffects: Boolean = false,
+    /**
      * Sends the playing track back to YouTube's own upload, and keeps it there.
      * Offered for any player item that has one behind it — a substituted copy
      * can be the wrong recording from the first second, not only after a
@@ -191,6 +202,7 @@ fun SongActionsMenu(
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
+    var pickingAudioEffects by remember { mutableStateOf(false) }
     // A menu has no pages to swap, so Song Info opens as a dialog.
     if (showingSongInfo) SongInfoDialog(song) { showingSongInfo = false }
     // Neutral rather than the sleeve's colours: the panel floats over the page
@@ -395,8 +407,16 @@ fun SongActionsMenu(
 
         // The player's own: about the track playing right now rather than
         // about the song as a thing in a library.
-        if (showSleepTimer || onLyricsOffset != null || onAutomixOverview != null || onCopyLog != null) {
+        if (showSleepTimer || showAudioEffects || onLyricsOffset != null || onAutomixOverview != null || onCopyLog != null) {
             if (startsGroup()) IosMenuSeparator()
+            if (showAudioEffects) {
+                ActionRow(
+                    icon = SfIcons.Waves,
+                    label = stringResource(R.string.audio_effects_menu),
+                    value = audioEffectsStatus(),
+                    accent = palette.accent,
+                ) { pickingAudioEffects = true }
+            }
             if (showSleepTimer) {
                 ActionRow(
                     icon = SfIcons.SleepTimer,
@@ -435,10 +455,12 @@ fun SongActionsMenu(
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
         Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            // The player's menu has the sleep timer, and swaps its rows for
-            // the picker in place.
+            // The player's menu has the sleep timer and audio effects, swapping
+            // its rows for the picker in place.
             if (pickingSleepTimer) {
                 SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+            } else if (pickingAudioEffects) {
+                AudioEffectsPicker(palette = palette, onBack = { pickingAudioEffects = false })
             } else {
                 rows()
             }
@@ -850,6 +872,241 @@ private fun SleepOption(
         onClick = onClick,
         iconTint = accent,
     )
+}
+
+@Composable
+private fun audioEffectsStatus(): String? {
+    val preset by AppSettings.varispeedPreset.collectAsStateWithLifecycle()
+    val speed by AppSettings.playbackSpeed.collectAsStateWithLifecycle()
+    val pitchLinked by AppSettings.pitchLinkedSpeed.collectAsStateWithLifecycle()
+    val reverb by AppSettings.roomReverb.collectAsStateWithLifecycle()
+    return when (preset) {
+        VarispeedPreset.OFF -> if (abs(speed - 1f) < 0.005f && !pitchLinked && reverb < 0.005f) null else formatSpeed(speed)
+        VarispeedPreset.SLOWED_REVERB -> stringResource(R.string.audio_effect_slowed_reverb)
+        VarispeedPreset.NIGHTCORE -> stringResource(R.string.audio_effect_nightcore)
+        VarispeedPreset.SPED_UP_REVERB -> stringResource(R.string.audio_effect_sped_up_reverb)
+        VarispeedPreset.CUSTOM -> buildList {
+            if (abs(speed - 1f) >= 0.005f) add(formatSpeed(speed))
+            if (reverb >= 0.005f) add("${(reverb * 100f).roundToInt()}%")
+            if (isEmpty() && pitchLinked) add(stringResource(R.string.audio_effect_varispeed_short))
+        }.joinToString(" · ").ifEmpty { null }
+    }
+}
+
+private fun formatSpeed(speed: Float): String = String.format(Locale.ROOT, "%.2fx", speed)
+
+@Composable
+private fun VarispeedPreset.localizedLabel(): String = stringResource(
+    when (this) {
+        VarispeedPreset.OFF -> R.string.audio_effect_off
+        VarispeedPreset.SLOWED_REVERB -> R.string.audio_effect_slowed_reverb
+        VarispeedPreset.NIGHTCORE -> R.string.audio_effect_nightcore
+        VarispeedPreset.SPED_UP_REVERB -> R.string.audio_effect_sped_up_reverb
+        VarispeedPreset.CUSTOM -> R.string.audio_effect_custom
+    },
+)
+
+/**
+ * In-place Varispeed (pitch-linked speed) and Room Reverb picker for the
+ * player's ⋯ menu: 1-tap presets for Slowed + Reverb, Nightcore, and Sped Up,
+ * plus fine sliders and pitch-link toggle.
+ */
+@Composable
+private fun AudioEffectsPicker(palette: ArtworkPalette, onBack: () -> Unit) {
+    val speed by AppSettings.playbackSpeed.collectAsStateWithLifecycle()
+    val pitchLinked by AppSettings.pitchLinkedSpeed.collectAsStateWithLifecycle()
+    val reverb by AppSettings.roomReverb.collectAsStateWithLifecycle()
+    val preset by AppSettings.varispeedPreset.collectAsStateWithLifecycle()
+    val bitPerfectReady by BitPerfectOutput.ready.collectAsStateWithLifecycle()
+
+    val foreground = MaterialTheme.colorScheme.onBackground
+    val colors = iosMenuColors()
+    val isModified = abs(speed - 1f) >= 0.005f || pitchLinked || reverb >= 0.005f
+
+    val subtitle = if (!isModified) {
+        stringResource(R.string.audio_effects_subtitle_idle)
+    } else {
+        buildList {
+            add(formatSpeed(speed))
+            if (pitchLinked) add(stringResource(R.string.audio_effect_varispeed_short))
+            if (reverb >= 0.005f) {
+                add(stringResource(R.string.audio_effect_reverb_percent, (reverb * 100f).roundToInt()))
+            }
+        }.joinToString(" · ")
+    }
+
+    Column(Modifier.fillMaxWidth()) {
+        SleepTimerHeader(
+            title = stringResource(R.string.audio_effects_menu),
+            subtitle = subtitle,
+            onBack = onBack,
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+
+        VarispeedPreset.SELECTABLE.forEach { option ->
+            val summary = when (option) {
+                VarispeedPreset.OFF -> formatSpeed(option.speed)
+                VarispeedPreset.NIGHTCORE -> formatSpeed(option.speed)
+                else -> "${formatSpeed(option.speed)} · ${(option.reverb * 100f).roundToInt()}%"
+            }
+            IosMenuRow(
+                label = option.localizedLabel(),
+                icon = if (option == preset) SfIcons.Check else null,
+                value = summary,
+                iconTint = palette.accent,
+                valueColor = colors.secondaryLabel,
+                onClick = { AppSettings.applyVarispeedPreset(option) },
+            )
+        }
+
+        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+
+        // Speed slider
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.playback_speed),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.label,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = formatSpeed(speed),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = palette.accent,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            StepButton(
+                label = "−",
+                contentDescription = stringResource(R.string.less),
+                enabled = speed > VarispeedLayout.MIN_SPEED + 0.005f,
+            ) {
+                AppSettings.setPlaybackSpeed(VarispeedLayout.clampSpeed(speed - VarispeedLayout.SPEED_STEP))
+            }
+            val speedRange = VarispeedLayout.MAX_SPEED - VarispeedLayout.MIN_SPEED
+            ThinSlider(
+                value = ((speed - VarispeedLayout.MIN_SPEED) / speedRange).coerceIn(0f, 1f),
+                onValueChange = { fraction ->
+                    val raw = VarispeedLayout.MIN_SPEED + fraction * speedRange
+                    // Snap to 0.01 increments while dragging smoothly.
+                    val snapped = (raw * 100f).roundToInt() / 100f
+                    AppSettings.setPlaybackSpeed(snapped)
+                },
+                idleHeight = 6.dp,
+                activeHeight = 10.dp,
+                activeColor = foreground.copy(alpha = 0.92f),
+                inactiveColor = foreground.copy(alpha = 0.26f),
+                modifier = Modifier.weight(1f),
+            )
+            StepButton(
+                label = "+",
+                contentDescription = stringResource(R.string.more),
+                enabled = speed < VarispeedLayout.MAX_SPEED - 0.005f,
+            ) {
+                AppSettings.setPlaybackSpeed(VarispeedLayout.clampSpeed(speed + VarispeedLayout.SPEED_STEP))
+            }
+        }
+
+        IosMenuRow(
+            label = stringResource(R.string.pitch_linked_speed),
+            icon = null,
+            onClick = { AppSettings.setPitchLinkedSpeed(!pitchLinked) },
+            trailing = {
+                IosSwitch(
+                    checked = pitchLinked,
+                    onCheckedChange = AppSettings::setPitchLinkedSpeed,
+                )
+            },
+        )
+
+        // Room reverb slider
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.room_reverb),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.label,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "${(reverb * 100f).roundToInt()}%",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = palette.accent,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            StepButton(
+                label = "−",
+                contentDescription = stringResource(R.string.less),
+                enabled = reverb > 0.005f,
+            ) {
+                AppSettings.setRoomReverb(
+                    (((reverb - VarispeedLayout.REVERB_STEP) * 20f).roundToInt() / 20f).coerceIn(0f, 1f),
+                )
+            }
+            ThinSlider(
+                value = reverb.coerceIn(0f, 1f),
+                onValueChange = { fraction ->
+                    val snapped = (fraction * 100f).roundToInt() / 100f
+                    AppSettings.setRoomReverb(snapped)
+                },
+                idleHeight = 6.dp,
+                activeHeight = 10.dp,
+                activeColor = foreground.copy(alpha = 0.92f),
+                inactiveColor = foreground.copy(alpha = 0.26f),
+                modifier = Modifier.weight(1f),
+            )
+            StepButton(
+                label = "+",
+                contentDescription = stringResource(R.string.more),
+                enabled = reverb < 0.995f,
+            ) {
+                AppSettings.setRoomReverb(
+                    (((reverb + VarispeedLayout.REVERB_STEP) * 20f).roundToInt() / 20f).coerceIn(0f, 1f),
+                )
+            }
+        }
+
+        if (bitPerfectReady) {
+            Text(
+                text = stringResource(R.string.bit_perfect_bypassed_footer),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.secondaryLabel,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+            )
+        }
+
+        if (isModified) {
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+            ActionRow(SfIcons.Close, stringResource(R.string.reset_audio_effects), accent = palette.accent) {
+                AppSettings.resetAudioEffects()
+            }
+        } else {
+            Spacer(Modifier.height(6.dp))
+        }
+    }
 }
 
 /** What the sleep timer row shows on the right, or null when none is armed. */
