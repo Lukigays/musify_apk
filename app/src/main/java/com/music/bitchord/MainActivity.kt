@@ -292,6 +292,7 @@ import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
+import com.music.bitchord.ui.components.backdrop.Backdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.rememberLayerBackdrop
@@ -5236,45 +5237,27 @@ private fun BitChordApp(
                             nowPlaying(playerSong)
                         }
                     }
-                    IosMenuPopover(
-                        item = songActions?.takeIf { songMenuOrigin == null && menuFromPlayer },
-                        anchor = songMenuAnchor,
+                    PlayerSheetTrackMenus(
+                        songActions = songActions,
+                        menuFromPlayer = menuFromPlayer,
+                        menuFromQueue = menuFromQueue,
+                        songMenuOrigin = songMenuOrigin,
+                        songMenuAnchor = songMenuAnchor,
+                        playerMenuHaze = playerMenuHaze,
+                        playerLiveCanvas = playerLiveCanvas,
+                        livePlayerBackdrop = livePlayerBackdrop,
+                        playerBackdrop = playerBackdrop,
+                        controller = controller,
+                        holdTarget = holdPreviewTarget?.takeIf { holdPreviewFromPlayer },
                         onDismiss = { songActions = null },
-                        backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
-                    ) { song ->
-                        songMenuBody(song)
-                    }
-                    HeldContextMenu(
-                        item = songActions?.takeIf { menuFromPlayer },
-                        held = songMenuOrigin,
-                        hazeState = playerMenuHaze,
-                        inPlayerSheet = true,
-                        preview = if (menuFromQueue) {
-                            { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
-                        } else null,
-                        accessory = { song, panelMod ->
-                            QuickPreviewCardBar(
-                                song = song,
-                                onToggle = { controller?.toggleQuickPreview() },
-                                onStop = { controller?.stopQuickPreview() },
-                                modifier = panelMod,
-                            )
-                        },
-                        onDismiss = { songActions = null },
-                        onPreviewClick = { song ->
+                        onOpenAlbum = { song ->
                             song.albumId?.let { id ->
                                 songActions = null
                                 dismissPlayer()
                                 viewModel.openDetail(id, song.albumName ?: song.title, song.artist, song.thumbnailUrl, BrowseType.ALBUM)
                             }
                         },
-                    ) { song ->
-                        songMenuBody(song)
-                    }
-                    QuickPreviewHoldOverlay(
-                        target = holdPreviewTarget?.takeIf { holdPreviewFromPlayer },
-                        hazeState = playerMenuHaze,
-                        backdrop = null,
+                        songMenuBody = songMenuBody,
                     )
                 }
             }
@@ -5351,71 +5334,34 @@ private fun BitChordApp(
         // on the frame the menu starts to grow — the stutter at the start of
         // its spring, blur or no blur.
         Isolated {
-            // Drawn over everything, tab bar and mini player included, and kept
-            // composed through its own exit — so it is not gated on songActions.
-            HeldContextMenu(
-                item = songActions?.takeUnless { menuFromPlayer && playerRaised },
-                held = songMenuOrigin,
+            PageTrackMenus(
+                songActions = songActions,
+                menuFromPlayer = menuFromPlayer,
+                menuFromQueue = menuFromQueue,
+                playerRaised = playerRaised,
+                songMenuOrigin = songMenuOrigin,
+                songMenuAnchor = songMenuAnchor,
                 hazeState = hazeState,
+                pageBackdrop = pageBackdrop,
+                controller = controller,
+                holdTarget = holdPreviewTarget?.takeUnless { holdPreviewFromPlayer },
+                hasAnyHoldTarget = holdPreviewTarget != null,
                 onDismiss = { songActions = null },
-                preview = if (menuFromQueue) {
-                    { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
-                } else null,
-                accessory = { song, panelMod ->
-                    QuickPreviewCardBar(
-                        song = song,
-                        onToggle = { controller?.toggleQuickPreview() },
-                        onStop = { controller?.stopQuickPreview() },
-                        modifier = panelMod,
-                    )
+                onClearMenus = {
+                    songMenuOrigin = null
+                    songMenuAnchor = null
+                    menuFromQueue = false
+                    menuFromHistory = false
                 },
-                // Tapping the lifted track opens its album, as Apple Music's does.
-                onPreviewClick = { song ->
+                onOpenAlbum = { song ->
                     song.albumId?.let { id ->
                         songActions = null
                         dismissPlayer()
                         viewModel.openDetail(id, song.albumName ?: song.title, song.artist, song.thumbnailUrl, BrowseType.ALBUM)
                     }
                 },
-            ) { song ->
-                songMenuBody(song)
-            }
-            QuickPreviewHoldOverlay(
-                target = holdPreviewTarget?.takeUnless { holdPreviewFromPlayer },
-                hazeState = hazeState,
-                backdrop = null,
+                songMenuBody = songMenuBody,
             )
-            // A tap on a ⋮ — or on the player's ⋯ while the player is part of the
-            // page, as on a tablet — hangs the same menu off that button. While the
-            // player is a sheet the sheet draws its own (above), so it can sit
-            // over the player and blur it.
-            // A player menu goes with the player: left up, it would carry on here,
-            // over the page.
-            LaunchedEffect(playerRaised) {
-                if (!playerRaised && menuFromPlayer) songActions = null
-            }
-            IosMenuPopover(
-                item = songActions?.takeIf { songMenuOrigin == null && !(menuFromPlayer && playerRaised) },
-                anchor = songMenuAnchor,
-                onDismiss = { songActions = null },
-                backdrop = pageBackdrop,
-                hazeState = hazeState,
-            ) { song ->
-                songMenuBody(song)
-            }
-            // A closed menu forgets where it was held and what it hung off, so
-            // whatever opens it next starts from nothing.
-            LaunchedEffect(songActions == null) {
-                if (songActions == null) {
-                    songMenuOrigin = null
-                    songMenuAnchor = null
-                    menuFromQueue = false
-                    menuFromHistory = false
-                    if (holdPreviewTarget == null) {
-                        controller?.stopQuickPreview()
-                    }
-                }
-            }
         }
 
         queuePlaylistSongs?.let { targets ->
@@ -5511,52 +5457,13 @@ private fun BitChordApp(
         // that is a file on this device. Nothing here waits on a network, so
         // there is no loading state and the outcome is known on the tap.
         if (offlinePlaylistTarget != null || creatingOfflinePlaylist) {
-            val target = offlinePlaylistTarget
-            val dismiss = {
-                offlinePlaylistTarget = null
-                creatingOfflinePlaylist = false
-            }
-            val choices = remember(offlinePlaylists) {
-                offlinePlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.id,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(
-                            R.plurals.song_count_plural,
-                            playlist.songs.size,
-                            playlist.songs.size,
-                        ),
-                        thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
-                            .takeUnless { playlist.isLiked },
-                    )
-                }
-            }
-            PlaylistPickerSheet(
-                playlists = choices,
-                loading = false,
-                song = target,
-                startCreating = target == null,
-                offline = true,
-                onDismiss = dismiss,
-                onAdd = { picked ->
-                    target?.let { song ->
-                        val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
-                        showQueueNotice(
-                            when {
-                                result.added > 1 -> context.resources.getQuantityString(
-                                    R.plurals.added_to_playlists_notice, result.added, result.added,
-                                )
-                                result.added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
-                                else -> context.getString(R.string.failed)
-                            },
-                        )
-                    }
+            OfflinePlaylistPickerHost(
+                target = offlinePlaylistTarget,
+                onDismiss = {
+                    offlinePlaylistTarget = null
+                    creatingOfflinePlaylist = false
                 },
-                onCreate = { title, _ ->
-                    OfflinePlaylists.create(title, listOfNotNull(target))
-                    if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
-                },
+                onNotice = showQueueNotice,
             )
         }
 
@@ -5858,25 +5765,20 @@ private fun BitChordApp(
         }
         // In a recompose scope of its own, as the track menu's is.
         Isolated {
-            // Rename is a text field and a keyboard, which have no place on a menu
-            // floating over the page: the menu hands it on, and the form comes up
-            // here on a sheet of its own.
-            browseActions?.takeIf { browseRenameInSheet }?.let { target ->
-                ModalBottomSheet(
-                    onDismissRequest = { browseActions = null },
-                    containerColor = MaterialTheme.colorScheme.background,
-                ) {
-                    browseMenuBody(target)
-                }
-            }
-            HeldContextMenu(
-                item = browseActions,
-                held = browseMenuOrigin,
+            PageBrowseMenus(
+                browseActions = browseActions,
+                browseRenameInSheet = browseRenameInSheet,
+                browseMenuOrigin = browseMenuOrigin,
+                browseMenuAnchor = browseMenuAnchor,
                 hazeState = hazeState,
+                pageBackdrop = pageBackdrop,
                 onDismiss = { browseActions = null },
-                // Tapping the lifted card opens it, as a tap on it in the list
-                // would have. Not for a Local Music grouping, which has no page.
-                onPreviewClick = { target ->
+                onClearMenus = {
+                    browseMenuOrigin = null
+                    browseMenuAnchor = null
+                    browseRenameInSheet = false
+                },
+                onOpenTarget = { target ->
                     target.browseId?.let { id ->
                         browseActions = null
                         viewModel.openDetail(
@@ -5888,26 +5790,8 @@ private fun BitChordApp(
                         )
                     }
                 },
-            ) { target ->
-                browseMenuBody(target)
-            }
-            // A tap on a ⋯ — the release page's own — hangs the menu off it.
-            IosMenuPopover(
-                item = browseActions?.takeIf { browseMenuOrigin == null && !browseRenameInSheet },
-                anchor = browseMenuAnchor,
-                onDismiss = { browseActions = null },
-                backdrop = pageBackdrop,
-                hazeState = hazeState,
-            ) { target ->
-                browseMenuBody(target)
-            }
-            LaunchedEffect(browseActions == null) {
-                if (browseActions == null) {
-                    browseMenuOrigin = null
-                    browseMenuAnchor = null
-                    browseRenameInSheet = false
-                }
-            }
+                browseMenuBody = browseMenuBody,
+            )
         }
 
         // ---- Welcome (once; under the sign-in WebView it can open) ----
@@ -6273,101 +6157,13 @@ private fun BitChordApp(
             )
         }
 
-        if (showWebDavEditor) {
-            BackHandler { showWebDavEditor = false }
-            ServerEditorHost(
-                hazeState = hazeState,
-                title = stringResource(R.string.webdav),
-                description = stringResource(R.string.webdav_description),
-                fields = listOf(
-                    FieldConfig(
-                        initial = AppSettings.webdavUrl.value,
-                        placeholder = stringResource(R.string.webdav_server_url_hint),
-                        keyboardType = KeyboardType.Uri,
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.webdavUsername.value,
-                        placeholder = stringResource(R.string.username),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.webdavPassword.value,
-                        placeholder = stringResource(R.string.password),
-                        keyboardType = KeyboardType.Password,
-                        isPassword = true,
-                    ),
-                ),
-                canSubmit = { it[0].isNotBlank() },
-                testFailedRes = R.string.webdav_test_failed,
-                onTest = { (url, username, password) ->
-                    com.music.bitchord.data.webdav.WebDavRepository.testConnection(
-                        url.trim(),
-                        username.trim(),
-                        password,
-                    )
-                },
-                onSave = { (url, username, password) ->
-                    AppSettings.setWebDavUrl(url.trim())
-                    AppSettings.setWebDavUsername(username.trim())
-                    AppSettings.setWebDavPassword(password)
-                    showWebDavEditor = false
-                },
-                onDismiss = { showWebDavEditor = false },
-            )
-        }
-
-        if (showSmbEditor) {
-            BackHandler { showSmbEditor = false }
-            ServerEditorHost(
-                hazeState = hazeState,
-                title = stringResource(R.string.smb),
-                description = stringResource(R.string.smb_description),
-                fields = listOf(
-                    FieldConfig(
-                        initial = AppSettings.smbHost.value,
-                        placeholder = stringResource(R.string.smb_server_hint),
-                        keyboardType = KeyboardType.Uri,
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbShare.value,
-                        placeholder = stringResource(R.string.smb_share_hint),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbBasePath.value,
-                        placeholder = stringResource(R.string.smb_folder_hint),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbUsername.value,
-                        placeholder = stringResource(R.string.username),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbPassword.value,
-                        placeholder = stringResource(R.string.password),
-                        keyboardType = KeyboardType.Password,
-                        isPassword = true,
-                    ),
-                ),
-                canSubmit = { it[0].isNotBlank() && it[1].isNotBlank() },
-                testFailedRes = R.string.smb_test_failed,
-                onTest = { (host, share, folder, username, password) ->
-                    com.music.bitchord.data.smb.SmbRepository.testConnection(
-                        host.trim(),
-                        share.trim(),
-                        folder.trim(),
-                        username.trim(),
-                        password,
-                    )
-                },
-                onSave = { (host, share, folder, username, password) ->
-                    AppSettings.setSmbHost(host.trim())
-                    AppSettings.setSmbShare(share.trim())
-                    AppSettings.setSmbBasePath(folder.trim())
-                    AppSettings.setSmbUsername(username.trim())
-                    AppSettings.setSmbPassword(password)
-                    showSmbEditor = false
-                },
-                onDismiss = { showSmbEditor = false },
-            )
-        }
+        WebDavAndSmbEditorsHost(
+            hazeState = hazeState,
+            showWebDavEditor = showWebDavEditor,
+            onDismissWebDav = { showWebDavEditor = false },
+            showSmbEditor = showSmbEditor,
+            onDismissSmb = { showSmbEditor = false },
+        )
 
         // A clash mid-upload, answered here so the scrim covers the tab bar
         // and mini player like every other alert. Backing out is a skip —
@@ -7006,5 +6802,327 @@ private fun Modifier.quickPreviewPointerWatch(
                 break
             }
         }
+    }
+}
+
+@Composable
+private fun PlayerSheetTrackMenus(
+    songActions: Song?,
+    menuFromPlayer: Boolean,
+    menuFromQueue: Boolean,
+    songMenuOrigin: HeldItem?,
+    songMenuAnchor: Rect?,
+    playerMenuHaze: HazeState,
+    playerLiveCanvas: Boolean,
+    livePlayerBackdrop: Backdrop,
+    playerBackdrop: Backdrop,
+    controller: MediaController?,
+    holdTarget: Pair<Song, HeldItem?>?,
+    onDismiss: () -> Unit,
+    onOpenAlbum: (Song) -> Unit,
+    songMenuBody: @Composable (Song) -> Unit,
+) {
+    IosMenuPopover(
+        item = songActions?.takeIf { songMenuOrigin == null && menuFromPlayer },
+        anchor = songMenuAnchor,
+        onDismiss = onDismiss,
+        backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
+    ) { song ->
+        songMenuBody(song)
+    }
+    HeldContextMenu(
+        item = songActions?.takeIf { menuFromPlayer },
+        held = songMenuOrigin,
+        hazeState = playerMenuHaze,
+        inPlayerSheet = true,
+        preview = if (menuFromQueue) {
+            { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
+        } else null,
+        accessory = { song, panelMod ->
+            QuickPreviewCardBar(
+                song = song,
+                onToggle = { controller?.toggleQuickPreview() },
+                onStop = { controller?.stopQuickPreview() },
+                modifier = panelMod,
+            )
+        },
+        onDismiss = onDismiss,
+        onPreviewClick = onOpenAlbum,
+    ) { song ->
+        songMenuBody(song)
+    }
+    QuickPreviewHoldOverlay(
+        target = holdTarget,
+        hazeState = playerMenuHaze,
+        backdrop = null,
+    )
+}
+
+@Composable
+private fun PageTrackMenus(
+    songActions: Song?,
+    menuFromPlayer: Boolean,
+    menuFromQueue: Boolean,
+    playerRaised: Boolean,
+    songMenuOrigin: HeldItem?,
+    songMenuAnchor: Rect?,
+    hazeState: HazeState,
+    pageBackdrop: Backdrop,
+    controller: MediaController?,
+    holdTarget: Pair<Song, HeldItem?>?,
+    hasAnyHoldTarget: Boolean,
+    onDismiss: () -> Unit,
+    onClearMenus: () -> Unit,
+    onOpenAlbum: (Song) -> Unit,
+    songMenuBody: @Composable (Song) -> Unit,
+) {
+    HeldContextMenu(
+        item = songActions?.takeUnless { menuFromPlayer && playerRaised },
+        held = songMenuOrigin,
+        hazeState = hazeState,
+        onDismiss = onDismiss,
+        preview = if (menuFromQueue) {
+            { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
+        } else null,
+        accessory = { song, panelMod ->
+            QuickPreviewCardBar(
+                song = song,
+                onToggle = { controller?.toggleQuickPreview() },
+                onStop = { controller?.stopQuickPreview() },
+                modifier = panelMod,
+            )
+        },
+        onPreviewClick = onOpenAlbum,
+    ) { song ->
+        songMenuBody(song)
+    }
+    QuickPreviewHoldOverlay(
+        target = holdTarget,
+        hazeState = hazeState,
+        backdrop = null,
+    )
+    LaunchedEffect(playerRaised) {
+        if (!playerRaised && menuFromPlayer) onDismiss()
+    }
+    IosMenuPopover(
+        item = songActions?.takeIf { songMenuOrigin == null && !(menuFromPlayer && playerRaised) },
+        anchor = songMenuAnchor,
+        onDismiss = onDismiss,
+        backdrop = pageBackdrop,
+        hazeState = hazeState,
+    ) { song ->
+        songMenuBody(song)
+    }
+    LaunchedEffect(songActions == null) {
+        if (songActions == null) {
+            onClearMenus()
+            if (!hasAnyHoldTarget) {
+                controller?.stopQuickPreview()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PageBrowseMenus(
+    browseActions: BrowseTarget?,
+    browseRenameInSheet: Boolean,
+    browseMenuOrigin: HeldItem?,
+    browseMenuAnchor: Rect?,
+    hazeState: HazeState,
+    pageBackdrop: Backdrop,
+    onDismiss: () -> Unit,
+    onClearMenus: () -> Unit,
+    onOpenTarget: (BrowseTarget) -> Unit,
+    browseMenuBody: @Composable (BrowseTarget) -> Unit,
+) {
+    browseActions?.takeIf { browseRenameInSheet }?.let { target ->
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+            browseMenuBody(target)
+        }
+    }
+    HeldContextMenu(
+        item = browseActions,
+        held = browseMenuOrigin,
+        hazeState = hazeState,
+        onDismiss = onDismiss,
+        onPreviewClick = onOpenTarget,
+    ) { target ->
+        browseMenuBody(target)
+    }
+    IosMenuPopover(
+        item = browseActions?.takeIf { browseMenuOrigin == null && !browseRenameInSheet },
+        anchor = browseMenuAnchor,
+        onDismiss = onDismiss,
+        backdrop = pageBackdrop,
+        hazeState = hazeState,
+    ) { target ->
+        browseMenuBody(target)
+    }
+    LaunchedEffect(browseActions == null) {
+        if (browseActions == null) {
+            onClearMenus()
+        }
+    }
+}
+
+@Composable
+private fun OfflinePlaylistPickerHost(
+    target: Song?,
+    onDismiss: () -> Unit,
+    onNotice: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val offlinePlaylists by OfflinePlaylists.playlists.collectAsStateWithLifecycle()
+    val choices = remember(offlinePlaylists) {
+        offlinePlaylists.map { playlist ->
+            UserPlaylist(
+                playlistId = playlist.id,
+                title = playlist.title,
+                subtitle = context.resources.getQuantityString(
+                    R.plurals.song_count_plural,
+                    playlist.songs.size,
+                    playlist.songs.size,
+                ),
+                thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
+                    .takeUnless { playlist.isLiked },
+            )
+        }
+    }
+    PlaylistPickerSheet(
+        playlists = choices,
+        loading = false,
+        song = target,
+        startCreating = target == null,
+        offline = true,
+        onDismiss = onDismiss,
+        onAdd = { picked ->
+            target?.let { song ->
+                val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
+                onNotice(
+                    when {
+                        result.added > 1 -> context.resources.getQuantityString(
+                            R.plurals.added_to_playlists_notice, result.added, result.added,
+                        )
+                        result.added == 1 -> context.getString(R.string.song_added_to_playlist)
+                        result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                        else -> context.getString(R.string.failed)
+                    },
+                )
+            }
+        },
+        onCreate = { title, _ ->
+            OfflinePlaylists.create(title, listOfNotNull(target))
+            if (target != null) onNotice(context.getString(R.string.song_added_to_playlist))
+        },
+    )
+}
+
+@Composable
+private fun WebDavAndSmbEditorsHost(
+    hazeState: HazeState,
+    showWebDavEditor: Boolean,
+    onDismissWebDav: () -> Unit,
+    showSmbEditor: Boolean,
+    onDismissSmb: () -> Unit,
+) {
+    if (showWebDavEditor) {
+        BackHandler(onBack = onDismissWebDav)
+        ServerEditorHost(
+            hazeState = hazeState,
+            title = stringResource(R.string.webdav),
+            description = stringResource(R.string.webdav_description),
+            fields = listOf(
+                FieldConfig(
+                    initial = AppSettings.webdavUrl.value,
+                    placeholder = stringResource(R.string.webdav_server_url_hint),
+                    keyboardType = KeyboardType.Uri,
+                ),
+                FieldConfig(
+                    initial = AppSettings.webdavUsername.value,
+                    placeholder = stringResource(R.string.username),
+                ),
+                FieldConfig(
+                    initial = AppSettings.webdavPassword.value,
+                    placeholder = stringResource(R.string.password),
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true,
+                ),
+            ),
+            canSubmit = { it[0].isNotBlank() },
+            testFailedRes = R.string.webdav_test_failed,
+            onTest = { (url, username, password) ->
+                com.music.bitchord.data.webdav.WebDavRepository.testConnection(
+                    url.trim(),
+                    username.trim(),
+                    password,
+                )
+            },
+            onSave = { (url, username, password) ->
+                AppSettings.setWebDavUrl(url.trim())
+                AppSettings.setWebDavUsername(username.trim())
+                AppSettings.setWebDavPassword(password)
+                onDismissWebDav()
+            },
+            onDismiss = onDismissWebDav,
+        )
+    }
+
+    if (showSmbEditor) {
+        BackHandler(onBack = onDismissSmb)
+        ServerEditorHost(
+            hazeState = hazeState,
+            title = stringResource(R.string.smb),
+            description = stringResource(R.string.smb_description),
+            fields = listOf(
+                FieldConfig(
+                    initial = AppSettings.smbHost.value,
+                    placeholder = stringResource(R.string.smb_server_hint),
+                    keyboardType = KeyboardType.Uri,
+                ),
+                FieldConfig(
+                    initial = AppSettings.smbShare.value,
+                    placeholder = stringResource(R.string.smb_share_hint),
+                ),
+                FieldConfig(
+                    initial = AppSettings.smbBasePath.value,
+                    placeholder = stringResource(R.string.smb_folder_hint),
+                ),
+                FieldConfig(
+                    initial = AppSettings.smbUsername.value,
+                    placeholder = stringResource(R.string.username),
+                ),
+                FieldConfig(
+                    initial = AppSettings.smbPassword.value,
+                    placeholder = stringResource(R.string.password),
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true,
+                ),
+            ),
+            canSubmit = { it[0].isNotBlank() && it[1].isNotBlank() },
+            testFailedRes = R.string.smb_test_failed,
+            onTest = { (host, share, folder, username, password) ->
+                com.music.bitchord.data.smb.SmbRepository.testConnection(
+                    host.trim(),
+                    share.trim(),
+                    folder.trim(),
+                    username.trim(),
+                    password,
+                )
+            },
+            onSave = { (host, share, folder, username, password) ->
+                AppSettings.setSmbHost(host.trim())
+                AppSettings.setSmbShare(share.trim())
+                AppSettings.setSmbBasePath(folder.trim())
+                AppSettings.setSmbUsername(username.trim())
+                AppSettings.setSmbPassword(password)
+                onDismissSmb()
+            },
+            onDismiss = onDismissSmb,
+        )
     }
 }
