@@ -181,6 +181,7 @@ import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
+import com.music.bitchord.playback.QuickPreviewController
 import com.music.bitchord.playback.VarispeedLayout
 import com.music.bitchord.playback.VarispeedPreset
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
@@ -262,6 +263,11 @@ fun SettingsScreen(
     val varispeedPreset by AppSettings.varispeedPreset.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val bestPart by AppSettings.showBestPart.collectAsStateWithLifecycle()
+    val quickPreviewOnHold by AppSettings.quickPreviewOnHold.collectAsStateWithLifecycle()
+    val quickPreviewHoldOnly by AppSettings.quickPreviewHoldOnly.collectAsStateWithLifecycle()
+    val quickPreviewBestPart by AppSettings.quickPreviewBestPart.collectAsStateWithLifecycle()
+    val quickPreviewDurationSec by AppSettings.quickPreviewDurationSec.collectAsStateWithLifecycle()
+    val quickPreviewDuckVolume by AppSettings.quickPreviewDuckVolume.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -1133,6 +1139,79 @@ fun SettingsScreen(
                             AppSettings.setRoomReverb(snapped.coerceIn(0f, 1f))
                         },
                         valueRange = 0f..1f,
+                        steps = 0,
+                    )
+                }
+            }
+            val quickPreviewTitle = stringResource(R.string.quick_preview_setting_title)
+            row(quickPreviewTitle, "quick preview", "preview", "long press", "hold", "duck", "ducking") {
+                SettingsRow(
+                    icon = SfIcons.PlayCircle,
+                    title = quickPreviewTitle,
+                    subtitle = stringResource(R.string.quick_preview_setting_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = quickPreviewOnHold,
+                            onCheckedChange = AppSettings::setQuickPreviewOnHold,
+                        )
+                    },
+                    onClick = { AppSettings.setQuickPreviewOnHold(!quickPreviewOnHold) },
+                )
+            }
+            if (quickPreviewOnHold) {
+                val holdOnlyTitle = stringResource(R.string.quick_preview_hold_only)
+                row(holdOnlyTitle, "quick preview", "hold", "release", divided = false) {
+                    SettingsSubRow(
+                        title = holdOnlyTitle,
+                        subtitle = stringResource(R.string.quick_preview_hold_only_subtitle),
+                        checked = quickPreviewHoldOnly,
+                        onCheckedChange = AppSettings::setQuickPreviewHoldOnly,
+                    )
+                }
+                val quickPreviewBestPartTitle = stringResource(R.string.quick_preview_best_part_setting)
+                row(quickPreviewBestPartTitle, "quick preview", "best part", "chorus", "highlight", divided = false) {
+                    SettingsSubRow(
+                        title = quickPreviewBestPartTitle,
+                        subtitle = stringResource(R.string.quick_preview_best_part_setting_subtitle),
+                        checked = quickPreviewBestPart,
+                        onCheckedChange = AppSettings::setQuickPreviewBestPart,
+                    )
+                }
+                val durationTitle = stringResource(R.string.quick_preview_duration_setting)
+                row(durationTitle, "quick preview", "duration", "seconds", divided = false) {
+                    SliderRow(
+                        icon = SfIcons.Clock,
+                        title = durationTitle,
+                        value = stringResource(R.string.quick_preview_duration_seconds, quickPreviewDurationSec),
+                        sliderValue = quickPreviewDurationSec.toFloat(),
+                        onSliderValue = { value ->
+                            val snapped = ((value / 5f).roundToInt() * 5).coerceIn(
+                                QuickPreviewController.MIN_DURATION_SEC,
+                                QuickPreviewController.MAX_DURATION_SEC,
+                            )
+                            AppSettings.setQuickPreviewDurationSec(snapped)
+                        },
+                        valueRange = QuickPreviewController.MIN_DURATION_SEC.toFloat()..QuickPreviewController.MAX_DURATION_SEC.toFloat(),
+                        steps = 0,
+                    )
+                }
+                val duckVolumeTitle = stringResource(R.string.quick_preview_duck_volume_setting)
+                row(duckVolumeTitle, "quick preview", "duck", "ducking", "volume", divided = false) {
+                    SliderRow(
+                        icon = SfIcons.VolumeUp,
+                        title = duckVolumeTitle,
+                        subtitle = stringResource(R.string.quick_preview_duck_volume_subtitle),
+                        value = if (quickPreviewDuckVolume <= 0.01f) {
+                            stringResource(R.string.quick_preview_duck_mute)
+                        } else {
+                            "${(quickPreviewDuckVolume * 100f).roundToInt()}%"
+                        },
+                        sliderValue = quickPreviewDuckVolume,
+                        onSliderValue = { value ->
+                            val snapped = (value * 20f).roundToInt() / 20f
+                            AppSettings.setQuickPreviewDuckVolume(snapped)
+                        },
+                        valueRange = QuickPreviewController.MIN_DUCK_VOLUME..QuickPreviewController.MAX_DUCK_VOLUME,
                         steps = 0,
                     )
                 }

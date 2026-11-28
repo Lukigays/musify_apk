@@ -1439,4 +1439,24 @@
     <string name="room_reverb">房间混响</string>
     <string name="room_reverb_subtitle">柔润立体声录音棚空间感</string>
     <string name="reset_audio_effects">重置音效</string>
+    <string name="quick_preview_label">快速试听</string>
+    <string name="quick_preview_action">快速试听</string>
+    <string name="quick_preview_loading">正在加载试听…</string>
+    <string name="quick_preview_error">试听不可用</string>
+    <string name="quick_preview_retry_hint">点击重试</string>
+    <string name="quick_preview_best_part">精彩片段</string>
+    <string name="quick_preview_pause">暂停试听</string>
+    <string name="quick_preview_resume">继续试听</string>
+    <string name="quick_preview_stop">停止试听</string>
+    <string name="quick_preview_setting_title">长按快速试听</string>
+    <string name="quick_preview_setting_subtitle">长按歌曲时自动平滑压低当前播放音量并试听片段</string>
+    <string name="quick_preview_hold_only">仅按住试听模式</string>
+    <string name="quick_preview_hold_only_subtitle">仅在按住期间播放，松手即停且不弹出菜单</string>
+    <string name="quick_preview_best_part_setting">跳转至高潮片段</string>
+    <string name="quick_preview_best_part_setting_subtitle">有可用数据时直接从副歌或最热片段开始</string>
+    <string name="quick_preview_duration_setting">试听时长</string>
+    <string name="quick_preview_duration_seconds">%1$d秒</string>
+    <string name="quick_preview_duck_volume_setting">背景压低音量</string>
+    <string name="quick_preview_duck_volume_subtitle">试听期间当前歌曲保留的音量比例</string>
+    <string name="quick_preview_duck_mute">静音</string>
 </resources>

@@ -1464,4 +1464,24 @@
     <string name="room_reverb">Réverbération de pièce</string>
     <string name="room_reverb_subtitle">Ambiance studio stéréo enveloppante</string>
     <string name="reset_audio_effects">Réinitialiser les effets audio</string>
+    <string name="quick_preview_label">Aperçu rapide</string>
+    <string name="quick_preview_action">Aperçu rapide</string>
+    <string name="quick_preview_loading">Chargement de l’aperçu…</string>
+    <string name="quick_preview_error">Aperçu indisponible</string>
+    <string name="quick_preview_retry_hint">Appuyez pour réessayer</string>
+    <string name="quick_preview_best_part">Meilleur passage</string>
+    <string name="quick_preview_pause">Mettre l’aperçu en pause</string>
+    <string name="quick_preview_resume">Reprendre l’aperçu</string>
+    <string name="quick_preview_stop">Arrêter l’aperçu</string>
+    <string name="quick_preview_setting_title">Aperçu par appui long</string>
+    <string name="quick_preview_setting_subtitle">Écouter un extrait en atténuant doucement la lecture en cours</string>
+    <string name="quick_preview_hold_only">Maintien uniquement</string>
+    <string name="quick_preview_hold_only_subtitle">Lire tant que le doigt reste appuyé et arrêter au relâchement sans menu</string>
+    <string name="quick_preview_best_part_setting">Aller au meilleur passage</string>
+    <string name="quick_preview_best_part_setting_subtitle">Démarrer près du refrain ou du passage le plus rejoué si disponible</string>
+    <string name="quick_preview_duration_setting">Durée de l’aperçu</string>
+    <string name="quick_preview_duration_seconds">%1$d s</string>
+    <string name="quick_preview_duck_volume_setting">Atténuation de l’arrière-plan</string>
+    <string name="quick_preview_duck_volume_subtitle">Volume conservé pour le titre en cours pendant un aperçu</string>
+    <string name="quick_preview_duck_mute">Muet</string>
 </resources>

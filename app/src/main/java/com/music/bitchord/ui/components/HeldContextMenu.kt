@@ -92,15 +92,19 @@ fun <T : Any> HeldContextMenu(
     inPlayerSheet: Boolean = false,
     /** Optional controls-free rendering; all other origins keep their captured picture. */
     preview: (@Composable (T) -> Unit)? = null,
+    /** Optional live strip tucked between the lifted item and its action panel (e.g. Quick Preview). */
+    accessory: (@Composable (T, Modifier) -> Unit)? = null,
     actions: @Composable (T) -> Unit,
 ) {
     val requested = if (item != null && held != null) item to held else null
     var last by remember { mutableStateOf<Pair<T, HeldItem>?>(null) }
     var lastPreview by remember { mutableStateOf<(@Composable (T) -> Unit)?>(null) }
+    var lastAccessory by remember { mutableStateOf<(@Composable (T, Modifier) -> Unit)?>(null) }
     if (requested != null && requested != last) {
         SideEffect {
             last = requested
             lastPreview = preview
+            lastAccessory = accessory
         }
     }
     val shown = requested ?: last ?: return
@@ -251,6 +255,15 @@ fun <T : Any> HeldContextMenu(
                     actions(menuItem)
                 }
             }
+            Box(Modifier.pointerInput(Unit) {}) {
+                val renderAccessory = if (requested != null) accessory else lastAccessory
+                if (renderAccessory != null) {
+                    val panelMod = Modifier
+                        .iosMenuPanel(fillOverride = plate, rimOverride = hairline)
+                        .additiveChrome(dark && !plain)
+                    renderAccessory(menuItem, panelMod)
+                }
+            }
         },
     ) { measurables, constraints ->
         val width = constraints.maxWidth
@@ -276,7 +289,12 @@ fun <T : Any> HeldContextMenu(
         val visualH = plateH * liftScale
 
         val menuWidth = (width - margin * 2).coerceAtMost(IosMenuWidth.roundToPx()).coerceAtLeast(0)
-        val menuMaxHeight = (bottom - top - visualH.roundToInt() - gap).coerceAtLeast(0)
+        val accessoryBox = measurables[3].measure(
+            Constraints(minWidth = 0, maxWidth = menuWidth, maxHeight = ((bottom - top) / 3).coerceAtLeast(0)),
+        )
+        val accGap = if (accessoryBox.height > 0) gap else 0
+        val accSpan = accessoryBox.height + accGap
+        val menuMaxHeight = (bottom - top - visualH.roundToInt() - gap - accSpan).coerceAtLeast(0)
         val menu = measurables[2].measure(
             Constraints(minWidth = menuWidth, maxWidth = menuWidth, maxHeight = menuMaxHeight),
         )
@@ -291,11 +309,11 @@ fun <T : Any> HeldContextMenu(
             .coerceIn(top.toFloat(), (bottom - visualH).coerceAtLeast(top.toFloat()))
         val menuBelow: Boolean
         when {
-            visualTop + visualH + gap + menu.height <= bottom -> menuBelow = true
-            visualTop - gap - menu.height >= top -> menuBelow = false
+            visualTop + visualH + gap + accSpan + menu.height <= bottom -> menuBelow = true
+            visualTop - gap - accSpan - menu.height >= top -> menuBelow = false
             else -> {
                 menuBelow = true
-                visualTop = (bottom - menu.height - gap - visualH).coerceAtLeast(top.toFloat())
+                visualTop = (bottom - menu.height - accSpan - gap - visualH).coerceAtLeast(top.toFloat())
             }
         }
         val visualCenterX = visualLeft + visualW / 2f
@@ -307,10 +325,17 @@ fun <T : Any> HeldContextMenu(
         val alignEnd = visualCenterX > width / 2f
         val menuX = (if (alignEnd) visualLeft + visualW - menuWidth else visualLeft).roundToInt()
             .coerceIn(margin, (width - margin - menuWidth).coerceAtLeast(margin))
-        val menuY = if (menuBelow) {
+        val accessoryX = (if (alignEnd) menuX + menuWidth - accessoryBox.width else menuX)
+            .coerceIn(margin, (width - margin - accessoryBox.width).coerceAtLeast(margin))
+        val accessoryY = if (menuBelow) {
             (visualTop + visualH + gap).roundToInt()
         } else {
-            (visualTop - gap - menu.height).roundToInt()
+            (visualTop - gap - accessoryBox.height).roundToInt()
+        }
+        val menuY = if (menuBelow) {
+            (visualTop + visualH + gap + accSpan).roundToInt()
+        } else {
+            (visualTop - gap - accSpan - menu.height).roundToInt()
         }
 
         // The card is placed at its natural size and scaled about its centre,
@@ -339,6 +364,23 @@ fun <T : Any> HeldContextMenu(
                     // Quick, because it starts over the very item it copies:
                     // only the plate and shadow arriving are new.
                     alpha = (p * 3f).coerceIn(0f, 1f)
+                }
+            }
+            if (accessoryBox.height > 0) {
+                accessoryBox.placeWithLayer(accessoryX, accessoryY) {
+                    val p = progress.value
+                    alpha = ((p - 0.1f) / 0.9f).coerceIn(0f, 1f)
+                    if (!reduceMotion) {
+                        transformOrigin = TransformOrigin(
+                            pivotFractionX = if (alignEnd) 1f else 0f,
+                            pivotFractionY = if (menuBelow) 0f else 1f,
+                        )
+                        val scale = lerp(0.55f, 1f, p)
+                        scaleX = scale
+                        scaleY = scale
+                        translationX = lerp(fromDx, 0f, p)
+                        translationY = lerp(fromDy, 0f, p)
+                    }
                 }
             }
             menu.placeWithLayer(menuX, menuY) {

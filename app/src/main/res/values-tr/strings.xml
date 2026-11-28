@@ -1463,4 +1463,24 @@
     <string name="room_reverb">Oda yankısı</string>
     <string name="room_reverb_subtitle">Zengin stereo stüdyo ambiyansı</string>
     <string name="reset_audio_effects">Ses efektlerini sıfırla</string>
+    <string name="quick_preview_label">Hızlı Önizleme</string>
+    <string name="quick_preview_action">Hızlı önizleme</string>
+    <string name="quick_preview_loading">Önizleme yükleniyor…</string>
+    <string name="quick_preview_error">Önizleme kullanılamıyor</string>
+    <string name="quick_preview_retry_hint">Tekrar denemek için dokun</string>
+    <string name="quick_preview_best_part">En İyi Bölüm</string>
+    <string name="quick_preview_pause">Önizlemeyi duraklat</string>
+    <string name="quick_preview_resume">Önizlemeyi sürdür</string>
+    <string name="quick_preview_stop">Önizlemeyi durdur</string>
+    <string name="quick_preview_setting_title">Uzun basmada Hızlı Önizleme</string>
+    <string name="quick_preview_setting_subtitle">Basılı tutarken mevcut çalmayı yumuşakça kısarak parçayı önizle</string>
+    <string name="quick_preview_hold_only">Yalnızca basılı tutma modu</string>
+    <string name="quick_preview_hold_only_subtitle">Yalnızca basılı tutarken çal ve bırakınca menü açmadan durdur</string>
+    <string name="quick_preview_best_part_setting">En İyi Bölüme atla</string>
+    <string name="quick_preview_best_part_setting_subtitle">Uygun olduğunda nakarat veya öne çıkan bölümden başlat</string>
+    <string name="quick_preview_duration_setting">Önizleme süresi</string>
+    <string name="quick_preview_duration_seconds">%1$d sn</string>
+    <string name="quick_preview_duck_volume_setting">Arka plan kısma düzeyi</string>
+    <string name="quick_preview_duck_volume_subtitle">Önizleme sırasında çalan parçanın korunacak ses seviyesi</string>
+    <string name="quick_preview_duck_mute">Sessiz</string>
 </resources>

@@ -1439,4 +1439,24 @@
     <string name="room_reverb">เสียงก้องห้อง</string>
     <string name="room_reverb_subtitle">บรรยากาศห้องสตูดิโอสเตอริโอ</string>
     <string name="reset_audio_effects">รีเซ็ตเอฟเฟกต์เสียง</string>
+    <string name="quick_preview_label">พรีวิวเพลงด่วน</string>
+    <string name="quick_preview_action">พรีวิวเพลงด่วน</string>
+    <string name="quick_preview_loading">กำลังโหลดพรีวิว…</string>
+    <string name="quick_preview_error">ไม่สามารถพรีวิวได้</string>
+    <string name="quick_preview_retry_hint">แตะเพื่อลองอีกครั้ง</string>
+    <string name="quick_preview_best_part">ท่อนฮิต</string>
+    <string name="quick_preview_pause">หยุดพรีวิวชั่วคราว</string>
+    <string name="quick_preview_resume">เล่นพรีวิวต่อ</string>
+    <string name="quick_preview_stop">หยุดพรีวิว</string>
+    <string name="quick_preview_setting_title">กดค้างเพื่อพรีวิวเพลง</string>
+    <string name="quick_preview_setting_subtitle">ฟังตัวอย่างเพลงเมื่อกดค้าง พร้อมลดเสียงเพลงที่กำลังเล่นอย่างนุ่มนวล</string>
+    <string name="quick_preview_hold_only">เล่นเฉพาะตอนกดค้าง</string>
+    <string name="quick_preview_hold_only_subtitle">เล่นเฉพาะขณะกดค้างและหยุดทันทีเมื่อปล่อยนิ้วโดยไม่เปิดเมนู</string>
+    <string name="quick_preview_best_part_setting">ข้ามไปยังท่อนที่ดีที่สุด</string>
+    <string name="quick_preview_best_part_setting_subtitle">เริ่มใกล้ท่อนฮุกหรือช่วงที่มีคนฟังซ้ำมากที่สุดเมื่อมีข้อมูล</string>
+    <string name="quick_preview_duration_setting">ระยะเวลาพรีวิว</string>
+    <string name="quick_preview_duration_seconds">%1$d วิ</string>
+    <string name="quick_preview_duck_volume_setting">ระดับลดเสียงพื้นหลัง</string>
+    <string name="quick_preview_duck_volume_subtitle">ความดังที่คงไว้สำหรับเพลงหลักระหว่างพรีวิว</string>
+    <string name="quick_preview_duck_mute">ปิดเสียง</string>
 </resources>

@@ -1464,4 +1464,24 @@
     <string name="room_reverb">Reverberación de sala</string>
     <string name="room_reverb_subtitle">Ambiente estéreo cálido de estudio</string>
     <string name="reset_audio_effects">Restablecer efectos de audio</string>
+    <string name="quick_preview_label">Vista previa rápida</string>
+    <string name="quick_preview_action">Vista previa rápida</string>
+    <string name="quick_preview_loading">Cargando vista previa…</string>
+    <string name="quick_preview_error">Vista previa no disponible</string>
+    <string name="quick_preview_retry_hint">Toca reintentar para probar de nuevo</string>
+    <string name="quick_preview_best_part">Mejor parte</string>
+    <string name="quick_preview_pause">Pausar vista previa</string>
+    <string name="quick_preview_resume">Reanudar vista previa</string>
+    <string name="quick_preview_stop">Detener vista previa</string>
+    <string name="quick_preview_setting_title">Vista previa al mantener pulsado</string>
+    <string name="quick_preview_setting_subtitle">Escucha un adelanto suavizando el volumen de la canción actual</string>
+    <string name="quick_preview_hold_only">Modo solo mantener</string>
+    <string name="quick_preview_hold_only_subtitle">Reproduce solo mientras mantienes pulsado y detén al soltar sin abrir el menú</string>
+    <string name="quick_preview_best_part_setting">Ir a la mejor parte</string>
+    <string name="quick_preview_best_part_setting_subtitle">Empieza cerca del estribillo o momento más reproducido si está disponible</string>
+    <string name="quick_preview_duration_setting">Duración del adelanto</string>
+    <string name="quick_preview_duration_seconds">%1$d s</string>
+    <string name="quick_preview_duck_volume_setting">Nivel de atenuación</string>
+    <string name="quick_preview_duck_volume_subtitle">Volumen de la pista actual mientras suena la vista previa</string>
+    <string name="quick_preview_duck_mute">Silencio</string>
 </resources>

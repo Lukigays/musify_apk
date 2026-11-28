@@ -1497,4 +1497,24 @@
     <string name="room_reverb">Реверберация комнаты</string>
     <string name="room_reverb_subtitle">Мягкое стереозвучание студии</string>
     <string name="reset_audio_effects">Сбросить аудиоэффекты</string>
+    <string name="quick_preview_label">Быстрое прослушивание</string>
+    <string name="quick_preview_action">Быстрое прослушивание</string>
+    <string name="quick_preview_loading">Загрузка отрывка…</string>
+    <string name="quick_preview_error">Отрывок недоступен</string>
+    <string name="quick_preview_retry_hint">Нажмите, чтобы повторить</string>
+    <string name="quick_preview_best_part">Лучший момент</string>
+    <string name="quick_preview_pause">Пауза отрывка</string>
+    <string name="quick_preview_resume">Продолжить отрывок</string>
+    <string name="quick_preview_stop">Остановить отрывок</string>
+    <string name="quick_preview_setting_title">Быстрое прослушивание по удержанию</string>
+    <string name="quick_preview_setting_subtitle">Прослушивайте отрывок трека при долгом нажатии с плавным приглушением фона</string>
+    <string name="quick_preview_hold_only">Только пока удерживаете</string>
+    <string name="quick_preview_hold_only_subtitle">Воспроизводить только при удержании и останавливать при отпускании без меню</string>
+    <string name="quick_preview_best_part_setting">Начинать с лучшего момента</string>
+    <string name="quick_preview_best_part_setting_subtitle">Переходить к припеву или главному фрагменту, если он известен</string>
+    <string name="quick_preview_duration_setting">Длительность отрывка</string>
+    <string name="quick_preview_duration_seconds">%1$d с</string>
+    <string name="quick_preview_duck_volume_setting">Уровень приглушения фона</string>
+    <string name="quick_preview_duck_volume_subtitle">Громкость текущего трека во время быстрого прослушивания</string>
+    <string name="quick_preview_duck_mute">Без звука</string>
 </resources>

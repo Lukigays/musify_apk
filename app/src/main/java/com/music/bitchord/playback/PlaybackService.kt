@@ -158,6 +158,9 @@ import com.music.bitchord.playback.smart.AutomixAnalysisSource
 import com.music.bitchord.playback.smart.VersionAudioAligner
 import com.music.bitchord.ui.player.discardBlockedAutoMixAmbient
 import com.music.bitchord.ui.player.prefetchAutoMixArtwork
+import com.music.bitchord.ui.replay.year.BestPart
+import com.music.bitchord.ui.replay.year.BestPartStart
+import com.music.bitchord.ui.replay.year.BestParts
 import com.music.bitchord.widget.MediaWidget
 import com.music.bitchord.widget.MediaWidgetSnapshot
 import com.music.bitchord.wear.WearBridge
@@ -717,6 +720,12 @@ class PlaybackService : MediaLibraryService() {
 
     /** Shared with the crossfade's tail player, so both read the same disk cache. */
     private var mediaSourceFactory: DefaultMediaSourceFactory? = null
+    private var quickPreviewMediaSourceFactory: DefaultMediaSourceFactory? = null
+    private var quickPreviewPlayer: ExoPlayer? = null
+    private var quickPreviewSessionJob: Job? = null
+    private var quickPreviewStopJob: Job? = null
+    private var quickPreviewDuckJob: Job? = null
+    private var pausedMainForExclusivePreview: Boolean = false
 
     /** Last sampled position of the playing track, in seconds. */
     private var lastPositionSeconds = 0L
@@ -872,6 +881,9 @@ class PlaybackService : MediaLibraryService() {
     private val queueRemoveEntriesUndoCommand = SessionCommand(ACTION_QUEUE_REMOVE_ENTRIES_WITH_UNDO, Bundle.EMPTY)
     private val queueClearUndoCommand = SessionCommand(ACTION_QUEUE_CLEAR_WITH_UNDO, Bundle.EMPTY)
     private val queueUndoCommand = SessionCommand(ACTION_QUEUE_UNDO, Bundle.EMPTY)
+    private val quickPreviewStartCommand = SessionCommand(ACTION_START_QUICK_PREVIEW, Bundle.EMPTY)
+    private val quickPreviewToggleCommand = SessionCommand(ACTION_TOGGLE_QUICK_PREVIEW, Bundle.EMPTY)
+    private val quickPreviewStopCommand = SessionCommand(ACTION_STOP_QUICK_PREVIEW, Bundle.EMPTY)
 
     private data class QueueUndoFingerprint(
         val player: ExoPlayer,
@@ -1145,6 +1157,11 @@ class PlaybackService : MediaLibraryService() {
             ) {
                 swappingMediaId = null
                 return
+            }
+            if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+                QuickPreviewController.state.value.isActive
+            ) {
+                stopQuickPreview(immediate = true)
             }
 
             // A receiver, if it is the speaker, is put on whatever became
@@ -1561,6 +1578,7 @@ class PlaybackService : MediaLibraryService() {
             // usually *not* the one playing, which is exactly why the lines
             // have to say. See [TrackLog.about].
             val about = TrackLog.about(mediaIdIn(dataSpec.uri))
+            val isQuickPreview = dataSpec.uri.getQueryParameter(QUICK_PREVIEW_PARAMETER) == "1"
             // A source-backed track is resolved by whichever source can serve
             // it, which is not necessarily the one it was queued from — see
             // [SourceResolver.resolve]. Handled ahead of the YouTube path
@@ -1569,7 +1587,9 @@ class PlaybackService : MediaLibraryService() {
             if (dataSpec.uri.authority == "source") {
                 // Direct Source Stream: an addon row is held until it is about
                 // to play, the same as a YouTube one — see [DirectSourceGate].
-                mediaIdIn(dataSpec.uri)?.let { id -> runBlocking(about) { DirectSourceGate.awaitOpen(id) } }
+                if (!isQuickPreview) {
+                    mediaIdIn(dataSpec.uri)?.let { id -> runBlocking(about) { DirectSourceGate.awaitOpen(id) } }
+                }
                 val directYouTube =
                     dataSpec.uri.getQueryParameter(DIRECT_YOUTUBE_PARAMETER) == "1"
                 val stream = runBlocking(about) {
@@ -1587,21 +1607,23 @@ class PlaybackService : MediaLibraryService() {
                         "No enabled source could serve ${dataSpec.uri.getQueryParameter("n")}"
                     },
                 )
-                val configId = dataSpec.uri.getQueryParameter("s")
-                val sourceName = if (directYouTube) {
-                    "YouTube"
-                } else {
-                    stream.sourceConfigId?.let { SourceRegistry.config(it)?.displayName }
-                        ?: configId?.let { SourceRegistry.config(it)?.displayName }
-                        ?: "Source"
+                if (!isQuickPreview) {
+                    val configId = dataSpec.uri.getQueryParameter("s")
+                    val sourceName = if (directYouTube) {
+                        "YouTube"
+                    } else {
+                        stream.sourceConfigId?.let { SourceRegistry.config(it)?.displayName }
+                            ?: configId?.let { SourceRegistry.config(it)?.displayName }
+                            ?: "Source"
+                    }
+                    val trackParam = dataSpec.uri.getQueryParameter("t")
+                    val fullMediaId = mediaIdIn(dataSpec.uri)
+                    NerdStats.onSourceStream(fullMediaId ?: trackParam, stream.format, sourceName)
+                    if (fullMediaId != null) {
+                        NerdStats.recordSource(fullMediaId, sourceName)
+                    }
+                    NerdStats.recordSource(trackParam, sourceName)
                 }
-                val trackParam = dataSpec.uri.getQueryParameter("t")
-                val fullMediaId = mediaIdIn(dataSpec.uri)
-                NerdStats.onSourceStream(fullMediaId ?: trackParam, stream.format, sourceName)
-                if (fullMediaId != null) {
-                    NerdStats.recordSource(fullMediaId, sourceName)
-                }
-                NerdStats.recordSource(trackParam, sourceName)
                 return@Resolver dataSpec.buildUpon()
                     .setUri(Uri.parse(stream.url))
                     .setHttpRequestHeaders(
@@ -1612,6 +1634,25 @@ class PlaybackService : MediaLibraryService() {
             }
             val videoId = dataSpec.uri.getQueryParameter("v")
                 ?: return@Resolver dataSpec
+            if (isQuickPreview) {
+                StreamChoice.of(videoId)?.let { existing ->
+                    return@Resolver dataSpec.buildUpon()
+                        .setUri(Uri.parse(existing.url))
+                        .setHttpRequestHeaders(existing.headers)
+                        .build()
+                }
+                val streamUrl = try {
+                    runBlocking(about) {
+                        withTimeout(RESOLVE_TIMEOUT_MS) { StreamResolver.resolve(videoId) }
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    throw java.io.IOException("Quick preview stream resolution timed out for $videoId", e)
+                }
+                return@Resolver dataSpec.buildUpon()
+                    .setUri(Uri.parse(streamUrl))
+                    .setHttpRequestHeaders(StreamResolver.mediaHeadersFor(streamUrl))
+                    .build()
+            }
             // Direct Source Stream holds every playback open of a track that
             // is neither playing nor next inside the window: read-ahead and
             // ExoPlayer's own early preparation of the next item alike. Not
@@ -1889,11 +1930,13 @@ class PlaybackService : MediaLibraryService() {
             // track's bytes it is fetching; this is the seam where both are in
             // hand. See [StreamContainer].
             streamResolver.resolveDataSpec(dataSpec).also { resolved ->
-                mediaIdIn(dataSpec.uri)?.let { StreamContainer.served(it, resolved.uri.toString()) }
-                // The same seam tells the cache whose file it is writing, which
-                // decides whether the entry outlives the track — see
-                // [AudioCache.Origin].
-                AudioCache.recordServed(dataSpec, resolved.uri.toString())
+                if (dataSpec.uri.getQueryParameter(QUICK_PREVIEW_PARAMETER) != "1") {
+                    mediaIdIn(dataSpec.uri)?.let { StreamContainer.served(it, resolved.uri.toString()) }
+                    // The same seam tells the cache whose file it is writing, which
+                    // decides whether the entry outlives the track — see
+                    // [AudioCache.Origin].
+                    AudioCache.recordServed(dataSpec, resolved.uri.toString())
+                }
             }
         }
         // Read-ahead resolves streams through the same chain the player does.
@@ -1908,6 +1951,11 @@ class PlaybackService : MediaLibraryService() {
         // cannot open at all. A DSD file leaves the extractor as float PCM.
         mediaSourceFactory = DefaultMediaSourceFactory(
             MusicOnlyPlayback.holdingFactory(AudioCache.playbackFactory(defaultDataSourceFactory)),
+            DsdExtractorsFactory(),
+        )
+            .setLoadErrorHandlingPolicy(PermanentAwareLoadErrorPolicy())
+        quickPreviewMediaSourceFactory = DefaultMediaSourceFactory(
+            AudioCache.quickPreviewFactory(defaultDataSourceFactory),
             DsdExtractorsFactory(),
         )
             .setLoadErrorHandlingPolicy(PermanentAwareLoadErrorPolicy())
@@ -7486,7 +7534,7 @@ class PlaybackService : MediaLibraryService() {
                             val elapsed = SystemClock.elapsedRealtime() - fadeStart
                             val remaining = (actualDuration - elapsed).coerceAtLeast(0L)
                             player?.let {
-                                it.volume = SleepTimer.calculateFadeVolume(remaining, actualDuration, true)
+                                it.volume = (SleepTimer.calculateFadeVolume(remaining, actualDuration, true) * QuickPreviewController.duckGain).coerceIn(0f, 1f)
                                 faded = it
                             }
                             if (elapsed >= actualDuration) break
@@ -7497,7 +7545,7 @@ class PlaybackService : MediaLibraryService() {
                     player?.pause()
                     SleepTimer.cancel()
                 } finally {
-                    faded?.volume = 1f
+                    faded?.volume = QuickPreviewController.duckGain.coerceIn(0f, 1f)
                 }
             }
         }
@@ -8635,6 +8683,9 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         crossfade?.cancelAutoMixVisual()
+        stopQuickPreview(immediate = true)
+        quickPreviewPlayer?.release()
+        quickPreviewPlayer = null
         invalidateQueueUndo()
         queueUndoRestoreBatch = null
         queueUndoMutationSettled = null
@@ -9540,6 +9591,9 @@ class PlaybackService : MediaLibraryService() {
                 .add(queueRemoveEntriesUndoCommand)
                 .add(queueClearUndoCommand)
                 .add(queueUndoCommand)
+                .add(quickPreviewStartCommand)
+                .add(quickPreviewToggleCommand)
+                .add(quickPreviewStopCommand)
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
@@ -9635,6 +9689,13 @@ class PlaybackService : MediaLibraryService() {
                         partySync?.endQueueDrag()
                     }
                 }
+                ACTION_START_QUICK_PREVIEW -> {
+                    val song = args.toQuickPreviewSong()
+                        ?: return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
+                    startQuickPreview(song)
+                }
+                ACTION_TOGGLE_QUICK_PREVIEW -> toggleQuickPreview()
+                ACTION_STOP_QUICK_PREVIEW -> stopQuickPreview(immediate = false)
                 // A widget or watch drawn before the track changed can still
                 // send this for one the player offers no Like on.
                 ACTION_TOGGLE_FAVORITE -> session.player.currentMediaItem
@@ -10496,6 +10557,351 @@ class PlaybackService : MediaLibraryService() {
                     .build(),
             )
             .build()
+
+    private fun startQuickPreview(song: Song) {
+        quickPreviewStopJob?.cancel()
+        quickPreviewStopJob = null
+        quickPreviewSessionJob?.cancel()
+
+        val durationMs = QuickPreviewController.clampDurationSec(
+            AppSettings.quickPreviewDurationSec.value,
+        ) * 1000L
+        val declaredDurationMs = TrackMatcher.secondsOf(song.durationText)?.times(1000L) ?: 0L
+
+        quickPreviewSessionJob = scope.launch(Dispatchers.Main.immediate) {
+            val preview = quickPreviewPlayer ?: buildQuickPreviewPlayer().also { quickPreviewPlayer = it }
+            runCatching {
+                preview.playWhenReady = false
+                preview.stop()
+                preview.clearMediaItems()
+            }
+
+            QuickPreviewController.update {
+                QuickPreviewState(
+                    song = song,
+                    status = QuickPreviewStatus.LOADING,
+                    startMs = 0L,
+                    elapsedMs = 0L,
+                    durationMs = durationMs,
+                    startSource = QuickPreviewStartSource.BEGINNING,
+                )
+            }
+
+            if (BitPerfectOutput.status.value.active) {
+                if (player?.isPlaying == true) {
+                    pausedMainForExclusivePreview = true
+                    player?.pause()
+                }
+            } else {
+                animateQuickPreviewDuckGain(
+                    target = QuickPreviewController.clampDuckVolume(AppSettings.quickPreviewDuckVolume.value),
+                    durationMs = 240L,
+                )
+            }
+
+            val useBestPart = AppSettings.quickPreviewBestPart.value
+            val cachedBest = if (useBestPart) BestParts.known(song.videoId) else null
+            val bestPartDeferred = if (
+                useBestPart &&
+                cachedBest == null &&
+                !song.videoId.startsWith("content://") &&
+                !song.videoId.startsWith("file://")
+            ) {
+                async(Dispatchers.IO) { BestParts.startFor(this@PlaybackService, song) }
+            } else {
+                null
+            }
+
+            val initialItem = song.toQuickPreviewMediaItem()
+            val ready = CompletableDeferred<Result<Unit>>()
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY && !ready.isCompleted) {
+                        ready.complete(Result.success(Unit))
+                    } else if (playbackState == Player.STATE_ENDED && !ready.isCompleted) {
+                        ready.complete(Result.failure(IllegalStateException("Preview ended before ready")))
+                    }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    if (!ready.isCompleted) {
+                        ready.complete(Result.failure(error))
+                    }
+                }
+            }
+
+            preview.addListener(listener)
+            try {
+                preview.volume = 0f
+                preview.playWhenReady = false
+                if (cachedBest != null && cachedBest.startMs > 0L) {
+                    val (preSeekMs, _) = QuickPreviewController.previewWindowStart(
+                        trackDurationMs = declaredDurationMs,
+                        bestPartMs = cachedBest.startMs,
+                        previewDurationMs = durationMs,
+                    )
+                    preview.setMediaItem(initialItem, preSeekMs)
+                } else {
+                    preview.setMediaItem(initialItem)
+                }
+                preview.prepare()
+
+                val prepareOutcome = withTimeoutOrNull(14_000L) { ready.await() }
+                if (prepareOutcome == null || prepareOutcome.isFailure) {
+                    val msg = prepareOutcome?.exceptionOrNull()?.localizedMessage ?: "Preview unavailable"
+                    QuickPreviewController.update {
+                        it.copy(status = QuickPreviewStatus.ERROR, errorMessage = msg)
+                    }
+                    restoreMainPlaybackAfterQuickPreview(immediate = false)
+                    return@launch
+                }
+            } finally {
+                preview.removeListener(listener)
+            }
+
+            val resolvedTrackDurationMs = preview.duration
+                .takeIf { it != C.TIME_UNSET && it > 0L }
+                ?: declaredDurationMs
+
+            val resolvedBestPart: BestPartStart? = when {
+                !useBestPart -> null
+                cachedBest != null -> cachedBest
+                bestPartDeferred != null -> {
+                    val fetched = withTimeoutOrNull(750L) { bestPartDeferred.await() }
+                    bestPartDeferred.cancel()
+                    fetched ?: resolvedTrackDurationMs
+                        .takeIf { it > 0L }
+                        ?.let { BestPartStart(BestPart.fallbackMs(it), BestPartStart.Source.FALLBACK) }
+                }
+                else -> resolvedTrackDurationMs
+                    .takeIf { it > 0L }
+                    ?.let { BestPartStart(BestPart.fallbackMs(it), BestPartStart.Source.FALLBACK) }
+            }
+
+            val isTrueHighlight = resolvedBestPart != null &&
+                resolvedBestPart.source != BestPartStart.Source.FALLBACK
+            val (targetStartMs, startSource) = if (useBestPart && resolvedBestPart != null) {
+                val (clampedStart, clampedSource) = QuickPreviewController.previewWindowStart(
+                    trackDurationMs = resolvedTrackDurationMs,
+                    bestPartMs = resolvedBestPart.startMs,
+                    previewDurationMs = durationMs,
+                )
+                clampedStart to if (isTrueHighlight && clampedStart > 0L) clampedSource else QuickPreviewStartSource.BEGINNING
+            } else {
+                0L to QuickPreviewStartSource.BEGINNING
+            }
+
+            if (targetStartMs > 0L && abs(preview.currentPosition - targetStartMs) > 650L) {
+                val seekReady = CompletableDeferred<Unit>()
+                val seekListener = object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY && !seekReady.isCompleted) {
+                            seekReady.complete(Unit)
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        if (!seekReady.isCompleted) seekReady.complete(Unit)
+                    }
+                }
+                preview.addListener(seekListener)
+                try {
+                    preview.seekTo(targetStartMs)
+                    withTimeoutOrNull(2_500L) { seekReady.await() }
+                } finally {
+                    preview.removeListener(seekListener)
+                }
+            }
+
+            preview.volume = 0f
+            preview.play()
+            QuickPreviewController.update {
+                it.copy(
+                    status = QuickPreviewStatus.PLAYING,
+                    startMs = targetStartMs,
+                    elapsedMs = 0L,
+                    startSource = startSource,
+                    errorMessage = null,
+                )
+            }
+
+            var accumulatedPlayingMs = 0L
+            var lastTickMs = SystemClock.elapsedRealtime()
+            val fadeInMs = 220L
+            val fadeOutMs = 320L
+
+            while (isActive) {
+                val currentState = QuickPreviewController.state.value
+                if (!currentState.isActive || currentState.song?.videoId != song.videoId) break
+
+                val nowMs = SystemClock.elapsedRealtime()
+                val delta = (nowMs - lastTickMs).coerceIn(0L, 250L)
+                lastTickMs = nowMs
+
+                when (currentState.status) {
+                    QuickPreviewStatus.PAUSED -> {
+                        if (preview.playWhenReady) preview.pause()
+                    }
+                    QuickPreviewStatus.PLAYING -> {
+                        if (!preview.playWhenReady) preview.play()
+                        if (preview.playbackState == Player.STATE_ENDED) break
+                        if (preview.isPlaying) {
+                            accumulatedPlayingMs += delta
+                        }
+                        val fadeInGain = (accumulatedPlayingMs.toFloat() / fadeInMs).coerceIn(0f, 1f)
+                        val remainingMs = (durationMs - accumulatedPlayingMs).coerceAtLeast(0L)
+                        val fadeOutGain = if (remainingMs < fadeOutMs) {
+                            (remainingMs.toFloat() / fadeOutMs).coerceIn(0f, 1f)
+                        } else {
+                            1f
+                        }
+                        preview.volume = minOf(fadeInGain, fadeOutGain)
+                        QuickPreviewController.update {
+                            it.copy(elapsedMs = accumulatedPlayingMs.coerceAtMost(durationMs))
+                        }
+                        if (accumulatedPlayingMs >= durationMs) break
+                    }
+                    else -> Unit
+                }
+                delay(50L)
+            }
+
+            val latest = QuickPreviewController.state.value
+            if (latest.isActive && latest.song?.videoId == song.videoId) {
+                stopQuickPreview(immediate = false, cancelSessionJob = false)
+            }
+        }
+    }
+
+    private fun toggleQuickPreview() {
+        val current = QuickPreviewController.state.value
+        val preview = quickPreviewPlayer ?: return
+        when (current.status) {
+            QuickPreviewStatus.PLAYING -> {
+                preview.pause()
+                QuickPreviewController.update { it.copy(status = QuickPreviewStatus.PAUSED) }
+                restoreMainPlaybackAfterQuickPreview(immediate = false)
+            }
+            QuickPreviewStatus.PAUSED -> {
+                if (BitPerfectOutput.status.value.active) {
+                    if (player?.isPlaying == true) {
+                        pausedMainForExclusivePreview = true
+                        player?.pause()
+                    }
+                } else {
+                    animateQuickPreviewDuckGain(
+                        target = QuickPreviewController.clampDuckVolume(AppSettings.quickPreviewDuckVolume.value),
+                        durationMs = 200L,
+                    )
+                }
+                preview.volume = 1f
+                preview.play()
+                QuickPreviewController.update { it.copy(status = QuickPreviewStatus.PLAYING) }
+            }
+            QuickPreviewStatus.ERROR -> current.song?.let(::startQuickPreview)
+            else -> Unit
+        }
+    }
+
+    private fun stopQuickPreview(immediate: Boolean, cancelSessionJob: Boolean = true) {
+        if (cancelSessionJob) {
+            quickPreviewSessionJob?.cancel()
+        }
+        quickPreviewSessionJob = null
+        quickPreviewStopJob?.cancel()
+        quickPreviewStopJob = null
+
+        val preview = quickPreviewPlayer
+        QuickPreviewController.update {
+            QuickPreviewState(song = null, status = QuickPreviewStatus.IDLE)
+        }
+
+        if (immediate || preview == null) {
+            preview?.let {
+                runCatching {
+                    it.volume = 0f
+                    it.pause()
+                    it.stop()
+                    it.clearMediaItems()
+                }
+            }
+            quickPreviewDuckJob?.cancel()
+            quickPreviewDuckJob = null
+            QuickPreviewController.duckGain = 1f
+            crossfade?.syncDuckGain()
+            if (pausedMainForExclusivePreview) {
+                pausedMainForExclusivePreview = false
+                player?.play()
+            }
+            return
+        }
+
+        quickPreviewStopJob = scope.launch(Dispatchers.Main.immediate) {
+            val startVol = preview.volume.coerceIn(0f, 1f)
+            if (preview.isPlaying && startVol > 0.02f) {
+                val steps = 10
+                for (step in 1..steps) {
+                    preview.volume = startVol * (1f - step.toFloat() / steps)
+                    delay(18L)
+                }
+            }
+            runCatching {
+                preview.volume = 0f
+                preview.pause()
+                preview.stop()
+                preview.clearMediaItems()
+            }
+            restoreMainPlaybackAfterQuickPreview(immediate = false)
+        }
+    }
+
+    private fun restoreMainPlaybackAfterQuickPreview(immediate: Boolean) {
+        if (pausedMainForExclusivePreview) {
+            pausedMainForExclusivePreview = false
+            player?.play()
+        }
+        if (immediate) {
+            quickPreviewDuckJob?.cancel()
+            quickPreviewDuckJob = null
+            QuickPreviewController.duckGain = 1f
+            crossfade?.syncDuckGain()
+        } else {
+            animateQuickPreviewDuckGain(target = 1f, durationMs = 260L)
+        }
+    }
+
+    private fun animateQuickPreviewDuckGain(target: Float, durationMs: Long) {
+        quickPreviewDuckJob?.cancel()
+        val from = QuickPreviewController.duckGain
+        if (abs(from - target) < 0.005f || durationMs <= 0L) {
+            QuickPreviewController.duckGain = target.coerceIn(0f, 1f)
+            crossfade?.syncDuckGain()
+            return
+        }
+        quickPreviewDuckJob = scope.launch(Dispatchers.Main.immediate) {
+            val startedAt = SystemClock.elapsedRealtime()
+            while (isActive) {
+                val elapsed = SystemClock.elapsedRealtime() - startedAt
+                val fraction = (elapsed.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+                QuickPreviewController.duckGain = QuickPreviewController.lerpGain(from, target, fraction)
+                crossfade?.syncDuckGain()
+                if (fraction >= 1f) break
+                delay(16L)
+            }
+            QuickPreviewController.duckGain = target.coerceIn(0f, 1f)
+            crossfade?.syncDuckGain()
+        }
+    }
+
+    private fun buildQuickPreviewPlayer(): ExoPlayer {
+        val factory = quickPreviewMediaSourceFactory
+            ?: error("quickPreviewMediaSourceFactory not initialized")
+        return ExoPlayer.Builder(this)
+            .setRenderersFactory(FfmpegFallbackRenderersFactory(this))
+            .setMediaSourceFactory(factory)
+            .setAudioAttributes(AUDIO_ATTRIBUTES, /* handleAudioFocus = */ false)
+            .build()
+    }
 
     private companion object {
         const val MEDIA_ROOT_ID = "root"

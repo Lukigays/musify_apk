@@ -1439,4 +1439,24 @@
     <string name="room_reverb">Gema ruang</string>
     <string name="room_reverb_subtitle">Nuansa studio stereo yang lembut</string>
     <string name="reset_audio_effects">Atur ulang efek audio</string>
+    <string name="quick_preview_label">Pratinjau Cepat</string>
+    <string name="quick_preview_action">Pratinjau cepat</string>
+    <string name="quick_preview_loading">Memuat pratinjau…</string>
+    <string name="quick_preview_error">Pratinjau tidak tersedia</string>
+    <string name="quick_preview_retry_hint">Ketuk ulangi untuk mencoba lagi</string>
+    <string name="quick_preview_best_part">Bagian Terbaik</string>
+    <string name="quick_preview_pause">Jeda pratinjau</string>
+    <string name="quick_preview_resume">Lanjutkan pratinjau</string>
+    <string name="quick_preview_stop">Hentikan pratinjau</string>
+    <string name="quick_preview_setting_title">Pratinjau Cepat saat tekan lama</string>
+    <string name="quick_preview_setting_subtitle">Putar pratinjau lagu sambil mengecilkan pemutaran aktif secara halus</string>
+    <string name="quick_preview_hold_only">Mode tahan-saja</string>
+    <string name="quick_preview_hold_only_subtitle">Putar hanya selama ditahan dan berhenti saat dilepas tanpa membuka menu</string>
+    <string name="quick_preview_best_part_setting">Lompat ke Bagian Terbaik</string>
+    <string name="quick_preview_best_part_setting_subtitle">Mulai pratinjau di dekat bagian reff atau sorotan jika tersedia</string>
+    <string name="quick_preview_duration_setting">Durasi pratinjau</string>
+    <string name="quick_preview_duration_seconds">%1$d dtk</string>
+    <string name="quick_preview_duck_volume_setting">Level peredaman latar</string>
+    <string name="quick_preview_duck_volume_subtitle">Volume lagu yang sedang diputar selama pratinjau berjalan</string>
+    <string name="quick_preview_duck_mute">Senyap</string>
 </resources>

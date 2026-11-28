@@ -1463,4 +1463,24 @@
     <string name="room_reverb">Raumhall</string>
     <string name="room_reverb_subtitle">Warme Stereo-Studioakustik</string>
     <string name="reset_audio_effects">Audioeffekte zurücksetzen</string>
+    <string name="quick_preview_label">Schnellvorschau</string>
+    <string name="quick_preview_action">Schnellvorschau</string>
+    <string name="quick_preview_loading">Vorschau wird geladen…</string>
+    <string name="quick_preview_error">Vorschau nicht verfügbar</string>
+    <string name="quick_preview_retry_hint">Tippe zum Wiederholen</string>
+    <string name="quick_preview_best_part">Bester Teil</string>
+    <string name="quick_preview_pause">Vorschau pausieren</string>
+    <string name="quick_preview_resume">Vorschau fortsetzen</string>
+    <string name="quick_preview_stop">Vorschau stoppen</string>
+    <string name="quick_preview_setting_title">Schnellvorschau bei langem Drücken</string>
+    <string name="quick_preview_setting_subtitle">Titel beim Halten vorhören und laufende Wiedergabe sanft absenken</string>
+    <string name="quick_preview_hold_only">Nur-Halten-Modus</string>
+    <string name="quick_preview_hold_only_subtitle">Nur beim Halten abspielen und beim Loslassen ohne Menü stoppen</string>
+    <string name="quick_preview_best_part_setting">Zum besten Teil springen</string>
+    <string name="quick_preview_best_part_setting_subtitle">Vorschau möglichst am Refrain oder Höhepunkt starten</string>
+    <string name="quick_preview_duration_setting">Vorschaudauer</string>
+    <string name="quick_preview_duration_seconds">%1$d s</string>
+    <string name="quick_preview_duck_volume_setting">Hintergrund-Absenkung</string>
+    <string name="quick_preview_duck_volume_subtitle">Verbleibende Lautstärke der laufenden Wiedergabe während der Vorschau</string>
+    <string name="quick_preview_duck_mute">Stumm</string>
 </resources>

@@ -1573,4 +1573,24 @@
     <string name="room_reverb">Room reverb</string>
     <string name="room_reverb_subtitle">Lush stereo studio ambience</string>
     <string name="reset_audio_effects">Reset audio effects</string>
+    <string name="quick_preview_label">Quick Preview</string>
+    <string name="quick_preview_action">Quick preview</string>
+    <string name="quick_preview_loading">Loading preview…</string>
+    <string name="quick_preview_error">Preview unavailable</string>
+    <string name="quick_preview_retry_hint">Tap retry to try again</string>
+    <string name="quick_preview_best_part">Best Part</string>
+    <string name="quick_preview_pause">Pause preview</string>
+    <string name="quick_preview_resume">Resume preview</string>
+    <string name="quick_preview_stop">Stop preview</string>
+    <string name="quick_preview_setting_title">Long-press Quick Preview</string>
+    <string name="quick_preview_setting_subtitle">Preview a track on hold while smoothly ducking active playback</string>
+    <string name="quick_preview_hold_only">Hold-only preview</string>
+    <string name="quick_preview_hold_only_subtitle">Play only while holding and stop on release without opening the menu</string>
+    <string name="quick_preview_best_part_setting">Jump to Best Part</string>
+    <string name="quick_preview_best_part_setting_subtitle">Start near the chorus or most replayed highlight when available</string>
+    <string name="quick_preview_duration_setting">Preview duration</string>
+    <string name="quick_preview_duration_seconds">%1$ds</string>
+    <string name="quick_preview_duck_volume_setting">Background ducking level</string>
+    <string name="quick_preview_duck_volume_subtitle">Volume kept for the playing track during a preview</string>
+    <string name="quick_preview_duck_mute">Mute</string>
 </resources>

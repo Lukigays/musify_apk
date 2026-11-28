@@ -1502,4 +1502,24 @@
     <string name="room_reverb">Pogłos pokoju</string>
     <string name="room_reverb_subtitle">Bogate brzmienie studyjnego pogłosu stereo</string>
     <string name="reset_audio_effects">Resetuj efekty dźwięku</string>
+    <string name="quick_preview_label">Szybki podgląd</string>
+    <string name="quick_preview_action">Szybki podgląd</string>
+    <string name="quick_preview_loading">Wczytywanie podglądu…</string>
+    <string name="quick_preview_error">Podgląd niedostępny</string>
+    <string name="quick_preview_retry_hint">Dotknij, aby spróbować ponownie</string>
+    <string name="quick_preview_best_part">Najlepsza część</string>
+    <string name="quick_preview_pause">Wstrzymaj podgląd</string>
+    <string name="quick_preview_resume">Wznów podgląd</string>
+    <string name="quick_preview_stop">Zatrzymaj podgląd</string>
+    <string name="quick_preview_setting_title">Szybki podgląd przy przytrzymaniu</string>
+    <string name="quick_preview_setting_subtitle">Odsłuchuj utwór przy przytrzymaniu, płynnie ściszając tło</string>
+    <string name="quick_preview_hold_only">Tylko podczas przytrzymania</string>
+    <string name="quick_preview_hold_only_subtitle">Odtwarzaj wyłącznie podczas trzymania i zatrzymaj po puszczeniu bez menu</string>
+    <string name="quick_preview_best_part_setting">Skocz do najlepszej części</string>
+    <string name="quick_preview_best_part_setting_subtitle">Zacznij w pobliżu refrenu lub najpopularniejszego fragmentu, jeśli dostępny</string>
+    <string name="quick_preview_duration_setting">Czas podglądu</string>
+    <string name="quick_preview_duration_seconds">%1$d s</string>
+    <string name="quick_preview_duck_volume_setting">Poziom ściszenia tła</string>
+    <string name="quick_preview_duck_volume_subtitle">Głośność bieżącego utworu podczas odsłuchu podglądu</string>
+    <string name="quick_preview_duck_mute">Wycisz</string>
 </resources>

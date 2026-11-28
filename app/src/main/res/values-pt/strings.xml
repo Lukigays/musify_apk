@@ -1467,4 +1467,24 @@
     <string name="room_reverb">Reverberação de sala</string>
     <string name="room_reverb_subtitle">Ambiência estéreo suave de estúdio</string>
     <string name="reset_audio_effects">Redefinir efeitos de áudio</string>
+    <string name="quick_preview_label">Prévia rápida</string>
+    <string name="quick_preview_action">Prévia rápida</string>
+    <string name="quick_preview_loading">Carregando prévia…</string>
+    <string name="quick_preview_error">Prévia indisponível</string>
+    <string name="quick_preview_retry_hint">Toque para tentar novamente</string>
+    <string name="quick_preview_best_part">Melhor parte</string>
+    <string name="quick_preview_pause">Pausar prévia</string>
+    <string name="quick_preview_resume">Retomar prévia</string>
+    <string name="quick_preview_stop">Parar prévia</string>
+    <string name="quick_preview_setting_title">Prévia rápida ao segurar</string>
+    <string name="quick_preview_setting_subtitle">Ouça um trecho da música reduzindo suavemente o volume atual</string>
+    <string name="quick_preview_hold_only">Somente ao segurar</string>
+    <string name="quick_preview_hold_only_subtitle">Reproduzir apenas enquanto segura e parar ao soltar sem abrir o menu</string>
+    <string name="quick_preview_best_part_setting">Ir para a melhor parte</string>
+    <string name="quick_preview_best_part_setting_subtitle">Começar perto do refrão ou destaque quando disponível</string>
+    <string name="quick_preview_duration_setting">Duração da prévia</string>
+    <string name="quick_preview_duration_seconds">%1$d s</string>
+    <string name="quick_preview_duck_volume_setting">Nível de atenuação</string>
+    <string name="quick_preview_duck_volume_subtitle">Volume mantido para a música atual durante a prévia</string>
+    <string name="quick_preview_duck_mute">Mudo</string>
 </resources>

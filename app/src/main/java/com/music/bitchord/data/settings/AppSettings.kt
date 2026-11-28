@@ -18,6 +18,7 @@ import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.AutoMixVisualFeed
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
+import com.music.bitchord.playback.QuickPreviewController
 import com.music.bitchord.playback.VarispeedLayout
 import com.music.bitchord.playback.VarispeedPreset
 import com.music.bitchord.ui.player.AutoMixArtworkPreferences
@@ -480,6 +481,21 @@ object AppSettings {
 
     /** Put the playing track's codec, bitrate and sample rate on the player. */
     val showNerdStats = MutableStateFlow(false)
+
+    /** Play a short preview with smooth audio ducking when long-pressing a song. */
+    val quickPreviewOnHold = MutableStateFlow(true)
+
+    /** When true, holding plays Quick Preview directly and releasing stops it without opening the menu. */
+    val quickPreviewHoldOnly = MutableStateFlow(false)
+
+    /** Jump Quick Preview straight to the track's Best Part / chorus when available. */
+    val quickPreviewBestPart = MutableStateFlow(true)
+
+    /** Quick Preview clip duration in seconds (clamped to 5..45s). */
+    val quickPreviewDurationSec = MutableStateFlow(QuickPreviewController.DEFAULT_DURATION_SEC)
+
+    /** Background playback gain while Quick Preview is playing (0f..0.40f). */
+    val quickPreviewDuckVolume = MutableStateFlow(QuickPreviewController.DEFAULT_DUCK_VOLUME)
 
     /**
      * The "Best Part" button on the player's artwork, which skips to the part of
@@ -1135,6 +1151,15 @@ object AppSettings {
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
+        quickPreviewOnHold.value = prefs.getBoolean(KEY_QUICK_PREVIEW_ON_HOLD, true)
+        quickPreviewHoldOnly.value = prefs.getBoolean(KEY_QUICK_PREVIEW_HOLD_ONLY, false)
+        quickPreviewBestPart.value = prefs.getBoolean(KEY_QUICK_PREVIEW_BEST_PART, true)
+        quickPreviewDurationSec.value = QuickPreviewController.clampDurationSec(
+            prefs.getInt(KEY_QUICK_PREVIEW_DURATION_SEC, QuickPreviewController.DEFAULT_DURATION_SEC),
+        )
+        quickPreviewDuckVolume.value = QuickPreviewController.clampDuckVolume(
+            prefs.getFloat(KEY_QUICK_PREVIEW_DUCK_VOLUME, QuickPreviewController.DEFAULT_DUCK_VOLUME),
+        )
         showBestPart.value = prefs.getBoolean(KEY_BEST_PART, true)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
@@ -1693,6 +1718,33 @@ object AppSettings {
     fun setDontRepeatSuggestions(value: Boolean) {
         dontRepeatSuggestions.value = value
         prefs.edit().putBoolean(KEY_DONT_REPEAT_SUGGESTIONS, value).apply()
+    }
+
+    fun setQuickPreviewOnHold(value: Boolean) {
+        quickPreviewOnHold.value = value
+        if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_QUICK_PREVIEW_ON_HOLD, value).apply()
+    }
+
+    fun setQuickPreviewHoldOnly(value: Boolean) {
+        quickPreviewHoldOnly.value = value
+        if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_QUICK_PREVIEW_HOLD_ONLY, value).apply()
+    }
+
+    fun setQuickPreviewBestPart(value: Boolean) {
+        quickPreviewBestPart.value = value
+        if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_QUICK_PREVIEW_BEST_PART, value).apply()
+    }
+
+    fun setQuickPreviewDurationSec(value: Int) {
+        val clamped = QuickPreviewController.clampDurationSec(value)
+        quickPreviewDurationSec.value = clamped
+        if (::prefs.isInitialized) prefs.edit().putInt(KEY_QUICK_PREVIEW_DURATION_SEC, clamped).apply()
+    }
+
+    fun setQuickPreviewDuckVolume(value: Float) {
+        val clamped = QuickPreviewController.clampDuckVolume(value)
+        quickPreviewDuckVolume.value = clamped
+        if (::prefs.isInitialized) prefs.edit().putFloat(KEY_QUICK_PREVIEW_DUCK_VOLUME, clamped).apply()
     }
 
     fun setPreferMusicOnly(value: Boolean) {
@@ -2540,6 +2592,11 @@ object AppSettings {
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
+    private const val KEY_QUICK_PREVIEW_ON_HOLD = "quick_preview_on_hold"
+    private const val KEY_QUICK_PREVIEW_HOLD_ONLY = "quick_preview_hold_only"
+    private const val KEY_QUICK_PREVIEW_BEST_PART = "quick_preview_best_part"
+    private const val KEY_QUICK_PREVIEW_DURATION_SEC = "quick_preview_duration_sec"
+    private const val KEY_QUICK_PREVIEW_DUCK_VOLUME = "quick_preview_duck_volume"
     private const val KEY_BEST_PART = "show_best_part"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"

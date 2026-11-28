@@ -1476,4 +1476,24 @@
     <string name="room_reverb">룸 리버브</string>
     <string name="room_reverb_subtitle">풍부한 스테레오 스튜디오 공간감</string>
     <string name="reset_audio_effects">오디오 효과 초기화</string>
+    <string name="quick_preview_label">빠른 미리듣기</string>
+    <string name="quick_preview_action">빠른 미리듣기</string>
+    <string name="quick_preview_loading">미리듣기 불러오는 중…</string>
+    <string name="quick_preview_error">미리듣기를 사용할 수 없음</string>
+    <string name="quick_preview_retry_hint">다시 시도하려면 탭하세요</string>
+    <string name="quick_preview_best_part">하이라이트</string>
+    <string name="quick_preview_pause">미리듣기 일시정지</string>
+    <string name="quick_preview_resume">미리듣기 계속</string>
+    <string name="quick_preview_stop">미리듣기 정지</string>
+    <string name="quick_preview_setting_title">길게 눌러 빠른 미리듣기</string>
+    <string name="quick_preview_setting_subtitle">재생 중인 곡의 볼륨을 부드럽게 낮추고 곡을 미리 재생</string>
+    <string name="quick_preview_hold_only">누르고 있을 때만 재생</string>
+    <string name="quick_preview_hold_only_subtitle">메뉴를 열지 않고 손을 떼면 즉시 미리듣기 종료</string>
+    <string name="quick_preview_best_part_setting">하이라이트로 이동</string>
+    <string name="quick_preview_best_part_setting_subtitle">가능한 경우 후렴구 또는 가장 많이 재생된 구간부터 시작</string>
+    <string name="quick_preview_duration_setting">미리듣기 길이</string>
+    <string name="quick_preview_duration_seconds">%1$d초</string>
+    <string name="quick_preview_duck_volume_setting">배경 음량 줄임 수준</string>
+    <string name="quick_preview_duck_volume_subtitle">미리듣기 중 현재 곡이 유지할 음량 비율</string>
+    <string name="quick_preview_duck_mute">음소거</string>
 </resources>

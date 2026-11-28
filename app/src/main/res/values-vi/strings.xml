@@ -1439,4 +1439,24 @@
     <string name="room_reverb">Vang phòng</string>
     <string name="room_reverb_subtitle">Không gian phòng thu stereo ấm áp</string>
     <string name="reset_audio_effects">Đặt lại hiệu ứng âm thanh</string>
+    <string name="quick_preview_label">Nghe thử nhanh</string>
+    <string name="quick_preview_action">Nghe thử nhanh</string>
+    <string name="quick_preview_loading">Đang tải bản nghe thử…</string>
+    <string name="quick_preview_error">Không thể nghe thử</string>
+    <string name="quick_preview_retry_hint">Chạm để thử lại</string>
+    <string name="quick_preview_best_part">Đoạn hay nhất</string>
+    <string name="quick_preview_pause">Tạm dừng nghe thử</string>
+    <string name="quick_preview_resume">Tiếp tục nghe thử</string>
+    <string name="quick_preview_stop">Dừng nghe thử</string>
+    <string name="quick_preview_setting_title">Nhấn giữ để nghe thử nhanh</string>
+    <string name="quick_preview_setting_subtitle">Nghe thử bài hát khi nhấn giữ và tự động giảm nhỏ nhạc đang phát</string>
+    <string name="quick_preview_hold_only">Chỉ phát khi giữ</string>
+    <string name="quick_preview_hold_only_subtitle">Chỉ phát trong lúc nhấn giữ và dừng ngay khi thả tay mà không mở menu</string>
+    <string name="quick_preview_best_part_setting">Nhảy tới đoạn hay nhất</string>
+    <string name="quick_preview_best_part_setting_subtitle">Bắt đầu gần điệp khúc hoặc đoạn nổi bật khi có dữ liệu</string>
+    <string name="quick_preview_duration_setting">Thời lượng nghe thử</string>
+    <string name="quick_preview_duration_seconds">%1$d giây</string>
+    <string name="quick_preview_duck_volume_setting">Mức giảm âm nền</string>
+    <string name="quick_preview_duck_volume_subtitle">Âm lượng giữ lại cho bài hát đang phát trong lúc nghe thử</string>
+    <string name="quick_preview_duck_mute">Tắt tiếng</string>
 </resources>

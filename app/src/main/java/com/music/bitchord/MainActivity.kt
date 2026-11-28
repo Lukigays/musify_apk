@@ -57,6 +57,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyListState
@@ -266,6 +268,11 @@ import com.music.bitchord.ui.components.IosMenuPopover
 import com.music.bitchord.ui.components.SongActionsMenu
 import com.music.bitchord.ui.components.HeldContextMenu
 import com.music.bitchord.ui.components.HeldItem
+import com.music.bitchord.ui.components.QuickPreviewCardBar
+import com.music.bitchord.ui.components.QuickPreviewHoldOverlay
+import com.music.bitchord.playback.startQuickPreview
+import com.music.bitchord.playback.stopQuickPreview
+import com.music.bitchord.playback.toggleQuickPreview
 import androidx.media3.session.MediaController
 import com.music.bitchord.playback.QualityUpgrade
 import com.music.bitchord.playback.rememberMediaController
@@ -750,6 +757,13 @@ private fun BitChordApp(
     var songMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
     /** The ⋮ or ⋯ the track menu was opened from, for [IosMenuPopover] to hang off. */
     var songMenuAnchor by remember { mutableStateOf<Rect?>(null) }
+    var holdPreviewTarget by remember { mutableStateOf<Pair<Song, HeldItem?>?>(null) }
+    var holdPreviewFromPlayer by remember { mutableStateOf(false) }
+    val quickPreviewHoldDispatcher = remember {
+        object {
+            var onLongPress: (Song, HeldItem?, Boolean) -> Boolean = { _, _, _ -> false }
+        }
+    }
     /**
      * A still of the player for its ⋯ menu to blur — see the player's sheet
      * below. Up here so the tap that opens the menu can ask for it: asked any
@@ -773,11 +787,17 @@ private fun BitChordApp(
     val pageBackdrop = rememberSnapshotBackdrop()
     /** Holding a row anywhere but the player — the menu without the player's rows. */
     val openSongMenu: (Song) -> Unit = { song ->
-        menuFromPlayer = false
-        menuFromQueue = false
-        songMenuOrigin = LongPressOrigin.consume()
-        songMenuAnchor = MenuAnchor.consume()
-        songActions = song
+        val held = LongPressOrigin.consume()
+        val anchor = MenuAnchor.consume()
+        if (quickPreviewHoldDispatcher.onLongPress(song, held, false)) {
+            menuFromHistory = false
+        } else {
+            menuFromPlayer = false
+            menuFromQueue = false
+            songMenuOrigin = held
+            songMenuAnchor = anchor
+            songActions = song
+        }
     }
     // Whether the player's album/artist lookup (below, for the current track)
     // is still in flight — read by the long-press sheet so it can show a
@@ -1136,6 +1156,26 @@ private fun BitChordApp(
     }
     val controller = rememberMediaController()
     val player = rememberPlayerState(controller)
+    quickPreviewHoldDispatcher.onLongPress = { song, held, fromPlayer ->
+        if (
+            held != null &&
+            AppSettings.quickPreviewOnHold.value &&
+            song.videoId.isNotBlank() &&
+            song.videoId != player.song?.videoId
+        ) {
+            if (AppSettings.quickPreviewHoldOnly.value) {
+                holdPreviewFromPlayer = fromPlayer
+                holdPreviewTarget = song to held
+                controller?.startQuickPreview(song)
+                true
+            } else {
+                controller?.startQuickPreview(song)
+                false
+            }
+        } else {
+            false
+        }
+    }
     val queueUndo by QueueScreenUndo.notice.collectAsStateWithLifecycle()
     // A music video's picture follows this controller's clock — see [MusicVideoEngine].
     DisposableEffect(controller) {
@@ -2806,12 +2846,16 @@ private fun BitChordApp(
             onMoveInQueue = { from, to -> controller?.moveMediaItem(from, to) },
             onQueueDragActiveChange = { active -> controller?.setQueueDragActive(active) },
             onQueueSongMenu = { _, queueSong ->
-                menuFromQueue = true
-                menuFromPlayer = true
-                songMenuOrigin = LongPressOrigin.consume()
-                songMenuAnchor = MenuAnchor.consume()
-                songActions = queueSong
-                if (!AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) playerBackdrop.capture()
+                val held = LongPressOrigin.consume()
+                val anchor = MenuAnchor.consume()
+                if (!quickPreviewHoldDispatcher.onLongPress(queueSong, held, true)) {
+                    menuFromQueue = true
+                    menuFromPlayer = true
+                    songMenuOrigin = held
+                    songMenuAnchor = anchor
+                    songActions = queueSong
+                    if (!AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) playerBackdrop.capture()
+                }
             },
             // The enriched copy, not player.song — otherwise the menu
             // hides the album and artist rows even once their browse
@@ -2965,6 +3009,13 @@ private fun BitChordApp(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .quickPreviewPointerWatch(
+                active = holdPreviewTarget != null && !holdPreviewFromPlayer,
+                onRelease = {
+                    holdPreviewTarget = null
+                    controller?.stopQuickPreview()
+                },
+            )
             // Nothing of the page under a portrait player that is fully up:
             // that player is its own window, opaque from edge to edge, and
             // this one drawing on behind it — the page, the glass bar and the
@@ -4797,6 +4848,14 @@ private fun BitChordApp(
                 fromQueue = fromQueue,
                 signedIn = signedIn,
                 likeStatus = likeStatusOf(song),
+                onQuickPreview = if (song.videoId.isNotBlank() && song.videoId != player.song?.videoId) {
+                    { controller?.startQuickPreview(song) }
+                } else {
+                    null
+                },
+                onToggleQuickPreview = { controller?.toggleQuickPreview() },
+                onStopQuickPreview = { controller?.stopQuickPreview() },
+                showInlineQuickPreviewBanner = songMenuOrigin == null,
                 onPlayNext = { playNext(song); songActions = null },
                 onAddToQueue = { addToQueue(song); songActions = null },
                 onStartRadio = { startRadio(song); songActions = null },
@@ -5116,6 +5175,13 @@ private fun BitChordApp(
                         // Where the app is holding the player, if it is — see
                         // [PlayerSheetMotion.contentOffsetPx]. Placement only.
                         .offset { IntOffset(0, playerSheetMotion.contentOffsetPx()) }
+                        .quickPreviewPointerWatch(
+                            active = holdPreviewTarget != null && holdPreviewFromPlayer,
+                            onRelease = {
+                                holdPreviewTarget = null
+                                controller?.stopQuickPreview()
+                            },
+                        )
                         // The dim behind the player, from the window's top to
                         // its bottom whatever the player's offset, and as deep
                         // as the player is open.
@@ -5186,6 +5252,14 @@ private fun BitChordApp(
                         preview = if (menuFromQueue) {
                             { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
                         } else null,
+                        accessory = { song, panelMod ->
+                            QuickPreviewCardBar(
+                                song = song,
+                                onToggle = { controller?.toggleQuickPreview() },
+                                onStop = { controller?.stopQuickPreview() },
+                                modifier = panelMod,
+                            )
+                        },
                         onDismiss = { songActions = null },
                         onPreviewClick = { song ->
                             song.albumId?.let { id ->
@@ -5197,6 +5271,11 @@ private fun BitChordApp(
                     ) { song ->
                         songMenuBody(song)
                     }
+                    QuickPreviewHoldOverlay(
+                        target = holdPreviewTarget?.takeIf { holdPreviewFromPlayer },
+                        hazeState = playerMenuHaze,
+                        backdrop = null,
+                    )
                 }
             }
         }
@@ -5282,6 +5361,14 @@ private fun BitChordApp(
                 preview = if (menuFromQueue) {
                     { song -> com.music.bitchord.ui.player.QueueSongPreview(song) }
                 } else null,
+                accessory = { song, panelMod ->
+                    QuickPreviewCardBar(
+                        song = song,
+                        onToggle = { controller?.toggleQuickPreview() },
+                        onStop = { controller?.stopQuickPreview() },
+                        modifier = panelMod,
+                    )
+                },
                 // Tapping the lifted track opens its album, as Apple Music's does.
                 onPreviewClick = { song ->
                     song.albumId?.let { id ->
@@ -5293,6 +5380,11 @@ private fun BitChordApp(
             ) { song ->
                 songMenuBody(song)
             }
+            QuickPreviewHoldOverlay(
+                target = holdPreviewTarget?.takeUnless { holdPreviewFromPlayer },
+                hazeState = hazeState,
+                backdrop = null,
+            )
             // A tap on a ⋮ — or on the player's ⋯ while the player is part of the
             // page, as on a tablet — hangs the same menu off that button. While the
             // player is a sheet the sheet draws its own (above), so it can sit
@@ -5319,6 +5411,9 @@ private fun BitChordApp(
                     songMenuAnchor = null
                     menuFromQueue = false
                     menuFromHistory = false
+                    if (holdPreviewTarget == null) {
+                        controller?.stopQuickPreview()
+                    }
                 }
             }
         }
@@ -6895,3 +6990,21 @@ private suspend fun LazyListState.scrollToTopEased() {
 
 /** Safely converts a nullable Float to non-null, defaulting to 0f for null. */
 private fun Float?.orZero(): Float = this ?: 0f
+
+private fun Modifier.quickPreviewPointerWatch(
+    active: Boolean,
+    onRelease: () -> Unit,
+): Modifier = pointerInput(active) {
+    if (!active) return@pointerInput
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.changes.any { it.pressed }) {
+                event.changes.forEach { if (it.position != it.previousPosition) it.consume() }
+            } else {
+                onRelease()
+                break
+            }
+        }
+    }
+}

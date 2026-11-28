@@ -199,6 +199,10 @@ fun SongActionsMenu(
     resolvingLinks: Boolean = false,
     /** Queue rows already belong to the queue, so hide its insertion actions. */
     fromQueue: Boolean = false,
+    onQuickPreview: (() -> Unit)? = null,
+    onToggleQuickPreview: (() -> Unit)? = null,
+    onStopQuickPreview: (() -> Unit)? = null,
+    showInlineQuickPreviewBanner: Boolean = false,
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
@@ -330,6 +334,14 @@ fun SongActionsMenu(
         // ride in this group rather than one of their own because for a
         // device file they can all be absent, and a group may not be empty.
         if (startsGroup()) IosMenuSeparator()
+        onQuickPreview?.let {
+            ActionRow(
+                icon = SfIcons.PlayCircle,
+                label = stringResource(R.string.quick_preview_action),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         ActionRow(
             icon = SfIcons.Radio,
             label = stringResource(R.string.start_radio),
@@ -462,6 +474,13 @@ fun SongActionsMenu(
             } else if (pickingAudioEffects) {
                 AudioEffectsPicker(palette = palette, onBack = { pickingAudioEffects = false })
             } else {
+                if (showInlineQuickPreviewBanner && onToggleQuickPreview != null && onStopQuickPreview != null) {
+                    QuickPreviewMenuBanner(
+                        song = song,
+                        onToggle = onToggleQuickPreview,
+                        onStop = onStopQuickPreview,
+                    )
+                }
                 rows()
             }
         }

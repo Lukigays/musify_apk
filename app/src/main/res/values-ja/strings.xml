@@ -1439,4 +1439,24 @@
     <string name="room_reverb">ルームリバーブ</string>
     <string name="room_reverb_subtitle">豊かなステレオスタジオ残響</string>
     <string name="reset_audio_effects">オーディオエフェクトをリセット</string>
+    <string name="quick_preview_label">クイックプレビュー</string>
+    <string name="quick_preview_action">クイックプレビュー</string>
+    <string name="quick_preview_loading">プレビューを読み込み中…</string>
+    <string name="quick_preview_error">プレビューを利用できません</string>
+    <string name="quick_preview_retry_hint">タップして再試行</string>
+    <string name="quick_preview_best_part">ベストパート</string>
+    <string name="quick_preview_pause">プレビューを一時停止</string>
+    <string name="quick_preview_resume">プレビューを再開</string>
+    <string name="quick_preview_stop">プレビューを停止</string>
+    <string name="quick_preview_setting_title">長押しでクイックプレビュー</string>
+    <string name="quick_preview_setting_subtitle">再生中の音量を滑らかに下げながら長押しで曲をプレビュー</string>
+    <string name="quick_preview_hold_only">長押し中のみ再生</string>
+    <string name="quick_preview_hold_only_subtitle">指を離すとメニューを開かず即座に停止</string>
+    <string name="quick_preview_best_part_setting">ベストパートから開始</string>
+    <string name="quick_preview_best_part_setting_subtitle">利用可能な場合はサビやハイライト付近から再生</string>
+    <string name="quick_preview_duration_setting">プレビュー時間</string>
+    <string name="quick_preview_duration_seconds">%1$d秒</string>
+    <string name="quick_preview_duck_volume_setting">背景音量の減衰レベル</string>
+    <string name="quick_preview_duck_volume_subtitle">プレビュー中に再生中の曲へ残す音量</string>
+    <string name="quick_preview_duck_mute">ミュート</string>
 </resources>

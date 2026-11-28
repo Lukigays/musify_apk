@@ -1463,4 +1463,24 @@
     <string name="room_reverb">रूम रीवरब</string>
     <string name="room_reverb_subtitle">सुखद स्टीरियो स्टूडियो एम्बिएंस</string>
     <string name="reset_audio_effects">ऑडियो प्रभाव रीसेट करें</string>
+    <string name="quick_preview_label">त्वरित पूर्वावलोकन</string>
+    <string name="quick_preview_action">त्वरित पूर्वावलोकन</string>
+    <string name="quick_preview_loading">पूर्वावलोकन लोड हो रहा है…</string>
+    <string name="quick_preview_error">पूर्वावलोकन उपलब्ध नहीं है</string>
+    <string name="quick_preview_retry_hint">पुनः प्रयास करने के लिए टैप करें</string>
+    <string name="quick_preview_best_part">सर्वश्रेष्ठ भाग</string>
+    <string name="quick_preview_pause">पूर्वावलोकन रोकें</string>
+    <string name="quick_preview_resume">पूर्वावलोकन फिर से शुरू करें</string>
+    <string name="quick_preview_stop">पूर्वावलोकन बंद करें</string>
+    <string name="quick_preview_setting_title">लॉन्ग-प्रेस त्वरित पूर्वावलोकन</string>
+    <string name="quick_preview_setting_subtitle">दबाकर रखने पर सक्रिय गीत को धीरे से धीमा कर पूर्वावलोकन चलाएं</string>
+    <string name="quick_preview_hold_only">केवल होल्ड मोड</string>
+    <string name="quick_preview_hold_only_subtitle">केवल दबाए रखने तक चलाएं और छोड़ते ही बिना मेन्यू खोले रोक दें</string>
+    <string name="quick_preview_best_part_setting">सर्वश्रेष्ठ भाग पर जाएं</string>
+    <string name="quick_preview_best_part_setting_subtitle">उपलब्ध होने पर कोरस या मुख्य हिस्से से शुरुआत करें</string>
+    <string name="quick_preview_duration_setting">पूर्वावलोकन अवधि</string>
+    <string name="quick_preview_duration_seconds">%1$d से.</string>
+    <string name="quick_preview_duck_volume_setting">बैकग्राउंड डकिंग स्तर</string>
+    <string name="quick_preview_duck_volume_subtitle">पूर्वावलोकन के दौरान चल रहे गीत की वॉल्यूम</string>
+    <string name="quick_preview_duck_mute">म्यूट</string>
 </resources>

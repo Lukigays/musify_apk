@@ -1217,6 +1217,46 @@ object AudioCache {
     }
 
     /**
+     * Read-only cache wrapper for [QuickPreviewController]: serves already-cached audio
+     * instantaneously without creating disk entries, acquiring cache write locks, or mutating
+     * provenance metadata for partial preview clips.
+     */
+    fun quickPreviewFactory(upstream: DataSource.Factory): DataSource.Factory = DataSource.Factory {
+        val upstreamDs = upstream.createDataSource()
+        if (!::cache.isInitialized) return@Factory upstreamDs
+        val readOnlyCacheDs = CacheDataSource.Factory()
+            .setCache(cache)
+            .setUpstreamDataSourceFactory(upstream)
+            .setCacheWriteDataSinkFactory(null)
+            .setCacheKeyFactory(keyFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            .createDataSource()
+        object : DataSource {
+            private var activeDs: DataSource = readOnlyCacheDs
+
+            override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
+                readOnlyCacheDs.addTransferListener(transferListener)
+                upstreamDs.addTransferListener(transferListener)
+            }
+
+            override fun open(dataSpec: DataSpec): Long {
+                val scheme = dataSpec.uri.scheme
+                activeDs = if (scheme == "file" || scheme == "content") upstreamDs else readOnlyCacheDs
+                return activeDs.open(dataSpec)
+            }
+
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+                activeDs.read(buffer, offset, length)
+
+            override fun getUri(): Uri? = activeDs.uri
+
+            override fun close() {
+                activeDs.close()
+            }
+        }
+    }
+
+    /**
      * Direct Source Stream's half of [heldByYouTube]: a track whose entry holds
      * YouTube's Opus from an earlier play — one made before the setting was
      * on, or one that started on YouTube and swapped up mid-song — goes to the

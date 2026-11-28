@@ -967,6 +967,105 @@ fun Song.hasYouTubeOriginal(): Boolean =
 /** A playback URI carrying this is explicitly requested YouTube, never a substitute. */
 const val DIRECT_YOUTUBE_PARAMETER = "direct_youtube"
 
+/** Marks a `bitchord://` stream resolve as an isolated Quick Preview request. */
+const val QUICK_PREVIEW_PARAMETER = "preview"
+
+const val ACTION_START_QUICK_PREVIEW = "com.music.bitchord.action.START_QUICK_PREVIEW"
+const val ACTION_TOGGLE_QUICK_PREVIEW = "com.music.bitchord.action.TOGGLE_QUICK_PREVIEW"
+const val ACTION_STOP_QUICK_PREVIEW = "com.music.bitchord.action.STOP_QUICK_PREVIEW"
+
+private const val KEY_PREVIEW_VIDEO_ID = "preview_video_id"
+private const val KEY_PREVIEW_TITLE = "preview_title"
+private const val KEY_PREVIEW_ARTIST = "preview_artist"
+private const val KEY_PREVIEW_THUMBNAIL = "preview_thumbnail"
+private const val KEY_PREVIEW_DURATION = "preview_duration"
+private const val KEY_PREVIEW_ALBUM_NAME = "preview_album_name"
+private const val KEY_PREVIEW_ARTIST_ID = "preview_artist_id"
+private const val KEY_PREVIEW_ALBUM_ID = "preview_album_id"
+private const val KEY_PREVIEW_IS_VIDEO = "preview_is_video"
+private const val KEY_PREVIEW_HAS_EXPLICIT = "preview_has_explicit"
+private const val KEY_PREVIEW_IS_EXPLICIT = "preview_is_explicit"
+private const val KEY_PREVIEW_SOURCE_QUALITY = "preview_source_quality"
+private const val KEY_PREVIEW_SOURCE_HI_RES = "preview_source_hi_res"
+private const val KEY_PREVIEW_LOCAL_URI = "preview_local_uri"
+private const val KEY_PREVIEW_LOCAL_PATH = "preview_local_path"
+
+fun Song.toQuickPreviewBundle(): Bundle = Bundle().apply {
+    putString(KEY_PREVIEW_VIDEO_ID, videoId)
+    putString(KEY_PREVIEW_TITLE, title)
+    putString(KEY_PREVIEW_ARTIST, artist)
+    thumbnailUrl?.let { putString(KEY_PREVIEW_THUMBNAIL, it) }
+    durationText?.let { putString(KEY_PREVIEW_DURATION, it) }
+    albumName?.let { putString(KEY_PREVIEW_ALBUM_NAME, it) }
+    artistId?.let { putString(KEY_PREVIEW_ARTIST_ID, it) }
+    albumId?.let { putString(KEY_PREVIEW_ALBUM_ID, it) }
+    putBoolean(KEY_PREVIEW_IS_VIDEO, isVideo)
+    isExplicit?.let {
+        putBoolean(KEY_PREVIEW_HAS_EXPLICIT, true)
+        putBoolean(KEY_PREVIEW_IS_EXPLICIT, it)
+    }
+    sourceQuality?.let { putString(KEY_PREVIEW_SOURCE_QUALITY, it) }
+    putBoolean(KEY_PREVIEW_SOURCE_HI_RES, sourceHiRes)
+    localUri?.let { putString(KEY_PREVIEW_LOCAL_URI, it) }
+    localPath?.let { putString(KEY_PREVIEW_LOCAL_PATH, it) }
+}
+
+fun Bundle.toQuickPreviewSong(): Song? {
+    val videoId = getString(KEY_PREVIEW_VIDEO_ID)?.takeIf { it.isNotBlank() } ?: return null
+    val title = getString(KEY_PREVIEW_TITLE).orEmpty()
+    val artist = getString(KEY_PREVIEW_ARTIST).orEmpty()
+    val explicit = if (getBoolean(KEY_PREVIEW_HAS_EXPLICIT, false)) {
+        getBoolean(KEY_PREVIEW_IS_EXPLICIT, false)
+    } else null
+    return Song(
+        videoId = videoId,
+        title = title,
+        artist = artist,
+        thumbnailUrl = getString(KEY_PREVIEW_THUMBNAIL),
+        durationText = getString(KEY_PREVIEW_DURATION),
+        artistId = getString(KEY_PREVIEW_ARTIST_ID),
+        albumName = getString(KEY_PREVIEW_ALBUM_NAME),
+        albumId = getString(KEY_PREVIEW_ALBUM_ID),
+        isVideo = getBoolean(KEY_PREVIEW_IS_VIDEO, false),
+        isExplicit = explicit,
+        sourceQuality = getString(KEY_PREVIEW_SOURCE_QUALITY),
+        sourceHiRes = getBoolean(KEY_PREVIEW_SOURCE_HI_RES, false),
+        localUri = getString(KEY_PREVIEW_LOCAL_URI),
+        localPath = getString(KEY_PREVIEW_LOCAL_PATH),
+    )
+}
+
+fun Song.toQuickPreviewMediaItem(): MediaItem {
+    val base = toMediaItem()
+    val uri = base.localConfiguration?.uri ?: return base
+    if (uri.scheme != "bitchord") return base
+    val previewUri = uri.buildUpon()
+        .appendQueryParameter(QUICK_PREVIEW_PARAMETER, "1")
+        .build()
+    return base.buildUpon().setUri(previewUri).build()
+}
+
+fun MediaController.startQuickPreview(song: Song) {
+    sendCustomCommand(
+        SessionCommand(ACTION_START_QUICK_PREVIEW, Bundle.EMPTY),
+        song.toQuickPreviewBundle(),
+    )
+}
+
+fun MediaController.toggleQuickPreview() {
+    sendCustomCommand(
+        SessionCommand(ACTION_TOGGLE_QUICK_PREVIEW, Bundle.EMPTY),
+        Bundle.EMPTY,
+    )
+}
+
+fun MediaController.stopQuickPreview() {
+    sendCustomCommand(
+        SessionCommand(ACTION_STOP_QUICK_PREVIEW, Bundle.EMPTY),
+        Bundle.EMPTY,
+    )
+}
+
 /**
  * Which track a playback URI is for, as a media id — the inverse of the URI
  * [toMediaItem] builds, as far as the identity goes.

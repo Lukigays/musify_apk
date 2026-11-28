@@ -883,7 +883,7 @@ class CrossfadeController(
         releaseHold()
         listeningTo?.removeListener(listener)
         listeningTo = null
-        active().volume = 1f
+        active().volume = duckScaled(1f)
         AppSettings.smartMixInProgress.value = false
         AppSettings.smartMixBlend.value = null
         clearMixView()
@@ -1953,8 +1953,8 @@ class CrossfadeController(
 
         val rise = mixRise(progress)
         val fall = mixFall(progress)
-        player.volume = rise
-        out.volume = if (ranOn(out)) 0f else fall
+        player.volume = duckScaled(rise)
+        out.volume = if (ranOn(out)) 0f else duckScaled(fall)
         onBlendHeadroom(
             headroomFor(mixRise(outgoingAt), outgoingLevel(elapsed / wallSpan + tracks.outgoingLeadMs() / span.toFloat(), wallSpan)),
         )
@@ -2441,7 +2441,7 @@ class CrossfadeController(
         val out = active()
         sleepFadeMs = fade.coerceAtLeast(1L)
         sleepFadeStartPositionMs = out.currentPosition
-        sleepFadeStartGain = out.volume
+        sleepFadeStartGain = unscaledGain(out.volume)
         outgoing = out
         incoming = null
         handedOff = false
@@ -2460,14 +2460,14 @@ class CrossfadeController(
         // hand the track back at full volume and let ordinary transition
         // logic resume next tick.
         if (!SleepTimer.afterTrack.value) {
-            out.volume = 1f
+            out.volume = duckScaled(1f)
             outgoing = null
             phase = Phase.IDLE
             return
         }
         val elapsed = (out.currentPosition - sleepFadeStartPositionMs).coerceAtLeast(0L)
         val progress = (elapsed.toFloat() / sleepFadeMs).coerceIn(0f, 1f)
-        out.volume = sleepFadeStartGain * fallGain(progress)
+        out.volume = duckScaled(sleepFadeStartGain * fallGain(progress))
         val done = progress >= 1f ||
             out.playbackState == Player.STATE_ENDED ||
             out.playbackState == Player.STATE_IDLE
@@ -2477,7 +2477,7 @@ class CrossfadeController(
     /** Pauses the track the fade-out was run on and retires the timer that asked for it. */
     private fun finishSleepFade() {
         outgoing?.pause()
-        outgoing?.volume = 1f
+        outgoing?.volume = duckScaled(1f)
         SleepTimer.cancel()
         outgoing = null
         phase = Phase.IDLE
@@ -2493,7 +2493,7 @@ class CrossfadeController(
         val progress = (SystemClock.elapsedRealtime() - bailStartedAt).toFloat() / BAIL_MS
         if (progress < 1f) {
             val fall = if (leaving === outgoing && ranOn(leaving)) 0f else bailFromGain * fallGain(progress)
-            leaving.volume = fall
+            leaving.volume = duckScaled(fall)
             onBlendHeadroom(headroomFor(1f, fall))
             return
         }
@@ -2732,8 +2732,8 @@ class CrossfadeController(
         applyEffectiveSpeed(into, AppSettings.playbackSpeed.value)
         // Silent through its own sink until the handover, so the player's
         // volume stays where the listener's ear expects it.
-        into.volume = 1f
-        out.volume = 1f
+        into.volume = duckScaled(1f)
+        out.volume = duckScaled(1f)
         filters.open()
         onBlendHeadroom(1f)
         into.setMediaItems(items, nextIndex, (session.inStartTrack * 1000).roundToLong())
@@ -3095,8 +3095,8 @@ class CrossfadeController(
         filters.open()
         // Whichever track is *not* the session's is the one ramped away: the
         // outgoing tail after the handoff, the incoming track before it.
-        if (handedOff) incoming?.volume = 1f else outgoing?.volume = 1f
-        bailFromGain = leavingOnBail()?.volume ?: 0f
+        if (handedOff) incoming?.volume = duckScaled(1f) else outgoing?.volume = duckScaled(1f)
+        bailFromGain = unscaledGain(leavingOnBail()?.volume ?: 0f)
         bailStartedAt = SystemClock.elapsedRealtime()
         phase = Phase.BAILING
     }
@@ -3138,7 +3138,7 @@ class CrossfadeController(
             // The roles have already traded: the incoming player is the session
             // and owns the queue from here, and the outgoing one is spare.
             incoming?.let {
-                it.volume = 1f
+                it.volume = duckScaled(1f)
                 // Undoes whatever [begin] stacked on for a beatmatched handoff,
                 // walked back a beat at a time over a few bars rather than in
                 // one jump — the tempo lurch a DJ never lets anyone hear. An
@@ -3150,7 +3150,7 @@ class CrossfadeController(
             // The transition never became audible, so the session player never
             // moved and the standby is the one to throw away.
             outgoing?.let { out ->
-                out.volume = 1f
+                out.volume = duckScaled(1f)
                 // Sped up for a blend that never came: walk it back like any stretch.
                 if (outgoingPlaybackRate != 1.0) {
                     beginEase(out, outgoingPlaybackRate, out.currentMediaItem?.let(analysisFor) ?: TrackAnalysis())
@@ -3195,7 +3195,7 @@ class CrossfadeController(
         // This is the next transition's incoming player, and from its handoff
         // the session: a hold left on it would pause every track at its end.
         player.pauseAtEndOfMediaItems = false
-        player.volume = 1f
+        player.volume = duckScaled(1f)
         applyEffectiveSpeed(player, AppSettings.playbackSpeed.value)
     }
 
@@ -3917,9 +3917,27 @@ class CrossfadeController(
         } else {
             softSpeedJob?.cancel()
             softSpeedJob = null
-            player.volume = 1f
+            player.volume = duckScaled(1f)
             applyEffectiveSpeed(player, AppSettings.playbackSpeed.value)
         }
+    }
+
+    /**
+     * Reapplies [QuickPreviewController.duckGain] immediately when no crossfade or
+     * notch ramp owns the active player's volume.
+     */
+    fun syncDuckGain() {
+        if (phase == Phase.IDLE && softSpeedJob == null) {
+            active().volume = duckScaled(1f)
+        }
+    }
+
+    private fun duckScaled(gain: Float): Float =
+        (gain * QuickPreviewController.duckGain).coerceIn(0f, 1f)
+
+    private fun unscaledGain(currentVolume: Float): Float {
+        val duck = QuickPreviewController.duckGain
+        return if (duck > 0.01f) (currentVolume / duck).coerceIn(0f, 1f) else 1f
     }
 
     /**
